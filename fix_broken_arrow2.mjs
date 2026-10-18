@@ -1,0 +1,14 @@
+import fs from 'fs';
+const f = 'D:/RAHAL/src/App.jsx';
+let c = fs.readFileSync(f, 'utf8');
+
+// البحث عن أي كود لـ el.innerHTML يحتوي على svg مكسور وإزالته بالكامل
+const brokenSvgRegex = /el\.innerHTML = '<svg viewBox="0 0 100 100"[\s\S]*?<\/svg>';?/g;
+
+const fixedArrow = `el.innerHTML = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><filter id="wazeShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="rgba(0,0,0,0.4)" /></filter><linearGradient id="wazeGrad" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#00e5ff" /><stop offset="100%" stop-color="#0097a7" /></linearGradient></defs><path d="M50 10 L88 85 L50 65 L12 85 Z" fill="url(#wazeGrad)" stroke="#ffffff" stroke-width="7" stroke-linejoin="round" filter="url(#wazeShadow)" /></svg>';`;
+
+// استبدال الكتلة المكسورة بالسهم النظيف
+c = c.replace(brokenSvgRegex, fixedArrow);
+
+fs.writeFileSync(f, c, 'utf8');
+console.log('DONE');

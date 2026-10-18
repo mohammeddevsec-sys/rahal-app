@@ -1,0 +1,22 @@
+﻿:root {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  color: #172033;
+  background: #eef2f6;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100svh;
+}
+
+button,
+input {
+  font-family: inherit;
+}

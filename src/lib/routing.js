@@ -1,0 +1,165 @@
+const OSRM_URL = 'https://router.project-osrm.org/route/v1/driving'
+const DEFAULT_PROFILE = 'driving'
+
+const MANEUVER_AR = {
+  turn: '\u0627\u0646\u0639\u0637\u0641',
+  'new name': '\u0627\u0633\u062A\u0645\u0631',
+  depart: '\u0627\u0646\u0637\u0644\u0642',
+  arrive: '\u0648\u0635\u0644\u062A',
+  merge: '\u0627\u0646\u062F\u0645\u062C',
+  on_ramp: '\u0627\u0635\u0639\u062F',
+  off_ramp: '\u0627\u0646\u0632\u0644',
+  fork: '\u0627\u0646\u0634\u0639\u0628',
+  roundabout: '\u0627\u0644\u062F\u0648\u0627\u0631',
+  rotary: '\u0627\u0644\u062F\u0648\u0627\u0631',
+  'end of road': '\u0646\u0647\u0627\u064A\u0629 \u0627\u0644\u0637\u0631\u064A\u0642',
+  continue: '\u0627\u0633\u062A\u0645\u0631',
+}
+
+const MODIFIER_AR = {
+  left: '\u064A\u0633\u0627\u0631',
+  right: '\u064A\u0645\u064A\u0646',
+  'slight left': '\u064A\u0633\u0627\u0631 \u0642\u0644\u064A\u0644\u0627\u064B',
+  'slight right': '\u064A\u0645\u064A\u0646 \u0642\u0644\u064A\u0644\u0627\u064B',
+  'sharp left': '\u064A\u0633\u0627\u0631 \u062D\u0627\u062F',
+  'sharp right': '\u064A\u0645\u064A\u0646 \u062D\u0627\u062F',
+  straight: '\u0645\u0628\u0627\u0634\u0631',
+  uturn: '\u062F\u0648\u0631\u0629 \u0639\u0643\u0633\u064A\u0629',
+}
+
+function toArabicInstruction(step) {
+  const m = step.maneuver || {}
+  const type = m.type || ''
+  const mod = m.modifier || ''
+
+  if (type === 'arrive') return '\u0648\u0635\u0644\u062A \u0625\u0644\u0649 \u0627\u0644\u0648\u062C\u0647\u0629'
+
+  if (type === 'depart') {
+    const modAr = MODIFIER_AR[mod] || ''
+    return ('\u0627\u0646\u0637\u0644\u0642 ' + modAr).trim()
+  }
+
+  if (type === 'roundabout' || type === 'rotary') {
+    const exit = m.exit || 1
+    return '\u062E\u0630 \u0627\u0644\u0645\u062E\u0631\u062C \u0631\u0642\u0645 ' + exit + ' \u0645\u0646 \u0627\u0644\u062F\u0648\u0627\u0631'
+  }
+
+  if (type === 'new name' || type === 'continue') {
+    return ('\u0627\u0633\u062A\u0645\u0631 ' + (MODIFIER_AR[mod] || '\u0645\u0628\u0627\u0634\u0631')).trim()
+  }
+
+  const verb = MANEUVER_AR[type] || '\u0627\u0646\u0639\u0637\u0641'
+  const modAr = MODIFIER_AR[mod] || ''
+  return (verb + ' ' + modAr).trim()
+}
+
+export async function getRoute(from, to, options = {}) {
+  if (!from || !to) return null
+  if (typeof from.lat !== 'number' || typeof from.lng !== 'number') return null
+  if (typeof to.lat !== 'number' || typeof to.lng !== 'number') return null
+
+  const profile = options.profile || DEFAULT_PROFILE
+  const url = OSRM_URL.replace('/driving', '/' + profile) + '/' +
+    from.lng + ',' + from.lat + ';' + to.lng + ',' + to.lat +
+    '?overview=full&geometries=geojson&steps=true&annotations=false'
+
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!res.ok) {
+    throw new Error('osrm failed: ' + res.status)
+  }
+
+  const data = await res.json()
+  if (!data.routes || data.routes.length === 0) {
+    return null
+  }
+
+  const route = data.routes[0]
+  const leg = route.legs && route.legs[0] ? route.legs[0] : null
+  const steps = leg && leg.steps ? leg.steps.map(function (s) {
+    const mm = s.maneuver || {}
+    const loc = mm.location && mm.location.length >= 2
+      ? { lng: mm.location[0], lat: mm.location[1] }
+      : null
+    return {
+      instruction: toArabicInstruction(s),
+      distance: s.distance,
+      duration: s.duration,
+      name: s.name || '',
+      location: loc,
+      type: mm.type || '',
+      modifier: mm.modifier || '',
+    }
+  }) : []
+
+  return {
+    distance: route.distance,
+    duration: route.duration,
+    geometry: route.geometry,
+    steps: steps,
+  }
+}
+
+export function formatDistance(meters) {
+  if (!meters && meters !== 0) return ''
+  if (meters < 1000) return Math.round(meters) + ' m'
+  return (meters / 1000).toFixed(1) + ' km'
+}
+
+export function formatDuration(seconds) {
+  if (!seconds && seconds !== 0) return ''
+  const mins = Math.round(seconds / 60)
+  if (mins < 60) return mins + ' min'
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h + ' h ' + m + ' min'
+}
+
+export function formatDurationArabic(seconds) {
+  if (!seconds && seconds !== 0) return ''
+  const mins = Math.round(seconds / 60)
+  if (mins < 1) return '\u0623\u0642\u0644 \u0645\u0646 \u062F\u0642\u064A\u0642\u0629'
+  if (mins < 60) return mins + ' \u062F\u0642\u064A\u0642\u0629'
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (m === 0) return h + ' \u0633\u0627\u0639\u0629'
+  return h + ' \u0633\u0627\u0639\u0629 \u0648 ' + m + ' \u062F\u0642\u064A\u0642\u0629'
+}
+
+export function formatDistanceArabic(meters) {
+  if (!meters && meters !== 0) return ''
+  if (meters < 1000) return Math.round(meters) + ' \u0645\u062A\u0631'
+  return (meters / 1000).toFixed(1) + ' \u0643\u0645'
+}
+
+function distanceToSegmentMeters(p, a, b) {
+  const ax = a[0]
+  const ay = a[1]
+  const bx = b[0]
+  const by = b[1]
+  const px = p[0]
+  const py = p[1]
+  const dx = bx - ax
+  const dy = by - ay
+  const l2 = dx * dx + dy * dy
+  let t = 0
+  if (l2 > 0) {
+    t = ((px - ax) * dx + (py - ay) * dy) / l2
+    if (t < 0) t = 0
+    if (t > 1) t = 1
+  }
+  const cx = ax + t * dx
+  const cy = ay + t * dy
+  const dLat = (py - cy) * 111320
+  const dLng = (px - cx) * 111320 * Math.cos((cy * Math.PI) / 180)
+  return Math.sqrt(dLat * dLat + dLng * dLng)
+}
+
+export function distanceToRoute(point, coords) {
+  if (!coords || coords.length < 2) return Infinity
+  let min = Infinity
+  for (let i = 0; i < coords.length - 1; i++) {
+    const d = distanceToSegmentMeters(point, coords[i], coords[i + 1])
+    if (d < min) min = d
+  }
+  return min
+}

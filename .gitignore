@@ -1,0 +1,36 @@
+﻿# Dependencies
+node_modules/
+
+# Build output
+dist/
+android/app/build/
+android/.gradle/
+
+# Backups & archives
+_backups/
+
+# Large binary data
+*.pmtiles
+rahal.db
+rahal.db-journal
+rahal.db-wal
+rahal.db-shm
+
+# Docker volume for Overpass (Linux files, unindexable on Windows/NTFS)
+overpass/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

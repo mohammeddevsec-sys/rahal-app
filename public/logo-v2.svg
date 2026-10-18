@@ -1,0 +1,17 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rahalNavGradient" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="85" stroke="url(#rahalNavGradient)" stroke-width="8" stroke-dasharray="6 4" opacity="0.25"/>
+  <circle cx="100" cy="100" r="85" stroke="url(#rahalNavGradient)" stroke-width="3"/>
+  <path d="M55 45 H105 C130 45 145 58 145 80 C145 98 135 110 115 115 V155 H90 V115 H55 V155 H30 V45 H55 Z" fill="url(#rahalNavGradient)" />
+  <path d="M55 67 H100 C108 67 115 72 115 80 C115 88 108 93 100 93 H55 V67 Z" fill="#ffffff" />
+  <path d="M115 115 C115 115 145 120 162 142 L180 128 C162 98 123 93 115 93 V115 Z" fill="#06b6d4" />
+  <path d="M85 135 C85 132 88 130 92 130 H118 C122 130 125 132 125 135 L128 144 H82 L85 135 Z" fill="#0284c7"/>
+  <rect x="80" y="144" width="50" height="10" rx="2" fill="url(#rahalNavGradient)"/>
+  <circle cx="90" cy="156" r="4" fill="#0f172a"/>
+  <circle cx="120" cy="156" r="4" fill="#0f172a"/>
+</svg>

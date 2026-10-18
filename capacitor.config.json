@@ -1,0 +1,12 @@
+﻿{
+    "server": {
+        "allowNavigation": ["*"]
+    },
+    "android": {
+        "allowMixedContent": true
+    },
+  "appId": "com.rahal.app",
+  "appName": "Rahal",
+  "webDir": "dist"
+}
+
