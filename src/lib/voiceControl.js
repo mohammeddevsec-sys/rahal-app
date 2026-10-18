@@ -19,6 +19,20 @@ async function say(text) {
   try { await speakArabicViaServer(text) } catch { /* noop */ }
 }
 
+function normalizeAr(s) {
+  if (!s) return ''
+  let out = ''
+  for (const ch of s) {
+    const c = ch.codePointAt(0)
+    if (c >= 0x064B && c <= 0x065F) continue
+    if (c === 0x0640) continue
+    if (c === 0x0623 || c === 0x0625 || c === 0x0622 || c === 0x0671) { out += String.fromCharCode(0x0627); continue }
+    if (c === 0x0649) { out += String.fromCharCode(0x064A); continue }
+    out += ch
+  }
+  return out
+}
+
 function clearTimers() {
   if (micWindowTimer) { clearTimeout(micWindowTimer); micWindowTimer = null }
   if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null }
@@ -95,7 +109,7 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
 
     if (silenceTimer) clearTimeout(silenceTimer)
     silenceTimer = setTimeout(() => {
-      const speechText = accumText.trim().toLowerCase()
+      const speechText = normalizeAr(accumText.trim().toLowerCase())
       accumText = ''
       if (!speechText) return
       const now = Date.now()
