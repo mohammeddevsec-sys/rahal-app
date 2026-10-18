@@ -176,6 +176,9 @@ function App() {
 
 
   const [tripActive, setTripActive] = useState(false)
+  const tripActiveRef = useRef(false)
+  const isDraggingRef = useRef(false)
+  useEffect(() => { tripActiveRef.current = tripActive }, [tripActive])
   const [muted, setMutedState] = useState(false)
   const { location, status, request } = useUserLocation()
 
@@ -538,7 +541,7 @@ function App() {
       startMap.easeTo({
         center: [location.lng, location.lat],
         zoom: 17,
-        pitch: 60,
+        pitch: 55,
         bearing: h,
         padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
         duration: 900,
@@ -1060,7 +1063,7 @@ useEffect(() => {
     window.__rahalSetPos = (lng, lat, heading) => {
       markerTargetRef.current.lng = lng
       markerTargetRef.current.lat = lat
-      if (typeof heading === 'number') markerTargetRef.current.heading = heading
+      if (typeof heading === 'number' && !isNaN(heading)) markerTargetRef.current.heading = heading
     }
     window.__rahalStopSim = () => {
       if (window.__rahalSimTimer) {
@@ -1072,6 +1075,17 @@ useEffect(() => {
 }, [mapReady])
 useEffect(() => {
   if (!mapReady) return
+  const map = mapRef.current
+  if (map) {
+    const onStart = () => { isDraggingRef.current = true }
+    const onEnd = () => { isDraggingRef.current = false }
+    map.on('dragstart', onStart)
+    map.on('dragend', onEnd)
+    map.on('rotatestart', onStart)
+    map.on('rotateend', onEnd)
+    map.on('pitchstart', onStart)
+    map.on('pitchend', onEnd)
+  }
   let rafId
   const step = () => {
     const m = markerRef.current
@@ -1082,12 +1096,15 @@ useEffect(() => {
       const k = 0.18
       sm.lng += (tgt.lng - sm.lng) * k
       sm.lat += (tgt.lat - sm.lat) * k
-      if (tgt.heading !== null && tgt.heading !== undefined) {
+      if (tgt.heading !== null && tgt.heading !== undefined && !isNaN(tgt.heading)) {
         const dh = ((tgt.heading - sm.heading + 540) % 360) - 180
         sm.heading = (sm.heading + dh * k + 360) % 360
       }
       m.setLngLat([sm.lng, sm.lat])
       if (typeof sm.heading === 'number') setMarkerRotation(sm.heading)
+      if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
+        mapRef.current.jumpTo({ center: [sm.lng, sm.lat], bearing: sm.heading })
+      }
     }
     rafId = requestAnimationFrame(step)
   }
@@ -1168,28 +1185,17 @@ const nextStep = useMemo(() => {
   useEffect(() => {
     if (!tripActive) return
     const map = mapRef.current
-    if (!map || !location) return
-    let heading = null
-    if (typeof location.heading === 'number' && !isNaN(location.heading) && location.heading !== null) {
-      heading = location.heading
-    } else if (nextStep && nextStep.location) {
-      const dLat = nextStep.location.lat - location.lat
-      const dLng = (nextStep.location.lng - location.lng) * Math.cos(location.lat * Math.PI / 180)
-      if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) {
-        heading = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
-      }
-    }
-    if (heading === null) heading = map.getBearing()
+    if (!map) return
+    
+    // Initialize Waze-like 3D Mode (once at start)
     map.easeTo({
-      center: [location.lng, location.lat],
       zoom: 17,
       pitch: 60,
-      bearing: heading,
       padding: { top: 0, bottom: Math.round((map.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
       duration: 800,
       essential: true,
     })
-  }, [tripActive, location, nextStep])
+  }, [tripActive])
 
   const [arrivalTimeText, setArrivalTimeText] = useState('--:--')
 
