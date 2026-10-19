@@ -1,4 +1,4 @@
-// Rahal Voice Control v2 - Clean robust version
+﻿// Rahal Voice Control v2 - Clean robust version
 // Web Speech API + Rana TTS + reports backend
 
 import { speakArabicViaServer, stopSpeaking } from './tts.js'
@@ -70,7 +70,7 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
 
   isListening = true
   accumText = ''
-  if (onStateChange) onStateChange(true)
+  // onStateChange(true) moved to onstart
 
   stopSpeaking()
   say('\u0623\u0647\u0644\u0627 \u0628\u0643')
@@ -92,6 +92,11 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
   }, MIC_WINDOW_MS)
 
   // Results handler
+  recognition.onstart = function () {
+    console.log('MIC_READY')
+    if (onStateChange) onStateChange(true)
+  }
+
   recognition.onresult = function (event) {
     console.log('RAW_MIC_INPUT:', event.results[event.results.length - 1][0].transcript);
     // Get latest final/partial text
@@ -161,44 +166,44 @@ async function executeVoiceCommand(text, ctx) {
 
   // ===== Filter Rana's navigation phrases =====
   const ranaFilter = [
-    '\u0627\u0646\u0639\u0637\u0641',        // انعطف
-    '\u0627\u0644\u062A\u0632\u0645',        // التزم
-    '\u0627\u062A\u062C\u0647',               // اتجه
-    '\u062E\u0630 \u0627\u0644\u0645\u062E\u0631\u062C', // خذ المخرج
-    '\u0648\u0635\u0644\u062A',               // وصلت
-    '\u0627\u0644\u062D\u0627\u0641\u0629',   // الحافة
-    '\u0645\u0646\u0637\u0642\u0629',         // منطقة
-    '\u0628\u0627\u0644\u0642\u0631\u0628',   // بالقرب
-    '\u0646\u0647\u0627\u064A\u0629',         // نهاية
-    '\u0628\u0639\u062F \u0645\u062A\u0631', // بعد متر
-    '\u0628\u0639\u062F \u0643\u064A\u0644\u0648', // بعد كيلو
-    '\u0627\u0644\u0637\u0631\u064A\u0642 \u064A\u0633\u0627\u0631', // الطريق يسار
-    '\u0627\u0644\u0637\u0631\u064A\u0642 \u064A\u0645\u064A\u0646', // الطريق يمين
-    '\u0645\u062A\u0631\u064B\u0627',          // متراً
-    '\u0645\u062A\u0631',                      // متر
-    '\u0643\u064A\u0644\u0648',                // كيلو
-    '\u062F\u0642\u064A\u0642\u0629',          // دقيقة
-    '\u062F\u0642\u0627\u0626\u0642',          // دقائق
-    '\u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642', // على الطريق
-    '\u062A\u062D\u062F\u064A\u062B',          // تحديث
+    '\u0627\u0646\u0639\u0637\u0641',        // Ø§Ù†Ø¹Ø·Ù
+    '\u0627\u0644\u062A\u0632\u0645',        // Ø§Ù„ØªØ²Ù…
+    '\u0627\u062A\u062C\u0647',               // Ø§ØªØ¬Ù‡
+    '\u062E\u0630 \u0627\u0644\u0645\u062E\u0631\u062C', // Ø®Ø° Ø§Ù„Ù…Ø®Ø±Ø¬
+    '\u0648\u0635\u0644\u062A',               // ÙˆØµÙ„Øª
+    '\u0627\u0644\u062D\u0627\u0641\u0629',   // Ø§Ù„Ø­Ø§ÙØ©
+    '\u0645\u0646\u0637\u0642\u0629',         // Ù…Ù†Ø·Ù‚Ø©
+    '\u0628\u0627\u0644\u0642\u0631\u0628',   // Ø¨Ø§Ù„Ù‚Ø±Ø¨
+    '\u0646\u0647\u0627\u064A\u0629',         // Ù†Ù‡Ø§ÙŠØ©
+    '\u0628\u0639\u062F \u0645\u062A\u0631', // Ø¨Ø¹Ø¯ Ù…ØªØ±
+    '\u0628\u0639\u062F \u0643\u064A\u0644\u0648', // Ø¨Ø¹Ø¯ ÙƒÙŠÙ„Ùˆ
+    '\u0627\u0644\u0637\u0631\u064A\u0642 \u064A\u0633\u0627\u0631', // Ø§Ù„Ø·Ø±ÙŠÙ‚ ÙŠØ³Ø§Ø±
+    '\u0627\u0644\u0637\u0631\u064A\u0642 \u064A\u0645\u064A\u0646', // Ø§Ù„Ø·Ø±ÙŠÙ‚ ÙŠÙ…ÙŠÙ†
+    '\u0645\u062A\u0631\u064B\u0627',          // Ù…ØªØ±Ø§Ù‹
+    '\u0645\u062A\u0631',                      // Ù…ØªØ±
+    '\u0643\u064A\u0644\u0648',                // ÙƒÙŠÙ„Ùˆ
+    '\u062F\u0642\u064A\u0642\u0629',          // Ø¯Ù‚ÙŠÙ‚Ø©
+    '\u062F\u0642\u0627\u0626\u0642',          // Ø¯Ù‚Ø§Ø¦Ù‚
+    '\u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642', // Ø¹Ù„Ù‰ Ø§Ù„Ø·Ø±ÙŠÙ‚
+    '\u062A\u062D\u062F\u064A\u062B',          // ØªØ­Ø¯ÙŠØ«
   ]
   // Allow if contains explicit report keywords
-  const isExplicit = text.includes('\u0627\u0643\u0648') ||          // اكو
-                     text.includes('\u0633\u064A\u0637\u0631') ||      // سيطر
-                     text.includes('\u062A\u0641\u062A\u064A\u0634') || // تفتيش
-                     text.includes('\u062D\u0627\u062F\u062B') ||      // حادث
-                     text.includes('\u0645\u0637\u0628') ||            // مطب
-                     text.includes('\u0637\u0633\u0629') ||            // طسة
-                     text.includes('\u0637\u0648\u0627\u0631') ||      // طوار
-                     text.includes('\u0643\u0627\u0645\u064A\u0631') || // كامير
-                     text.includes('\u0627\u0632\u062F\u062D\u0627\u0645') || // ازدحام
-                     text.includes('\u062D\u064A\u0648\u0627\u0646') || // حيوان
-                     text.includes('\u0628\u0646\u0632\u064A\u0646') || // بنزين
-                     text.includes('\u0648\u0642\u0648\u062F') ||       // وقود
-                     text.includes('\u062E\u0637\u0631') ||             // خطر
-                     text.includes('\u0637\u0642\u0633') ||             // طقس
-                     text.includes('\u0627\u0639\u0645\u0627\u0644') || // اعمال
-                     text.includes('\u0645\u0633\u062F\u0648\u062F') || text.includes('\u0637\u0631\u064A\u0642') || text.includes('\u0645\u0633\u0627\u0631')    // مسدود
+  const isExplicit = text.includes('\u0627\u0643\u0648') ||          // Ø§ÙƒÙˆ
+                     text.includes('\u0633\u064A\u0637\u0631') ||      // Ø³ÙŠØ·Ø±
+                     text.includes('\u062A\u0641\u062A\u064A\u0634') || // ØªÙØªÙŠØ´
+                     text.includes('\u062D\u0627\u062F\u062B') ||      // Ø­Ø§Ø¯Ø«
+                     text.includes('\u0645\u0637\u0628') ||            // Ù…Ø·Ø¨
+                     text.includes('\u0637\u0633\u0629') ||            // Ø·Ø³Ø©
+                     text.includes('\u0637\u0648\u0627\u0631') ||      // Ø·ÙˆØ§Ø±
+                     text.includes('\u0643\u0627\u0645\u064A\u0631') || // ÙƒØ§Ù…ÙŠØ±
+                     text.includes('\u0627\u0632\u062F\u062D\u0627\u0645') || // Ø§Ø²Ø¯Ø­Ø§Ù…
+                     text.includes('\u062D\u064A\u0648\u0627\u0646') || // Ø­ÙŠÙˆØ§Ù†
+                     text.includes('\u0628\u0646\u0632\u064A\u0646') || // Ø¨Ù†Ø²ÙŠÙ†
+                     text.includes('\u0648\u0642\u0648\u062F') ||       // ÙˆÙ‚ÙˆØ¯
+                     text.includes('\u062E\u0637\u0631') ||             // Ø®Ø·Ø±
+                     text.includes('\u0637\u0642\u0633') ||             // Ø·Ù‚Ø³
+                     text.includes('\u0627\u0639\u0645\u0627\u0644') || // Ø§Ø¹Ù…Ø§Ù„
+                     text.includes('\u0645\u0633\u062F\u0648\u062F') || text.includes('\u0637\u0631\u064A\u0642') || text.includes('\u0645\u0633\u0627\u0631')    // Ù…Ø³Ø¯ÙˆØ¯
 
   if (!isExplicit) {
     for (const rf of ranaFilter) {
@@ -229,14 +234,14 @@ async function executeVoiceCommand(text, ctx) {
 
     // ===== STOP TRIP =====
   if (
-      text.includes('\u0648\u0643\u0641') || // وكف
-      text.includes('\u0627\u0646\u0647\u064A') || // انهي
-      text.includes('\u0627\u0644\u063A\u0627\u0621') || // الغاء
-      text.includes('\u0627\u0644\u063A\u064A') || // الغي
-      text.includes('\u0627\u0648\u0642\u0641') || // اوقف
-      text.includes('\u0648\u0642\u0641') || // وقف
-      text.includes('\u062E\u0644\u0635') || // خلص
-      text.includes('\u062E\u0644\u0627\u0635') // خلاص
+      text.includes('\u0648\u0643\u0641') || // ÙˆÙƒÙ
+      text.includes('\u0627\u0646\u0647\u064A') || // Ø§Ù†Ù‡ÙŠ
+      text.includes('\u0627\u0644\u063A\u0627\u0621') || // Ø§Ù„ØºØ§Ø¡
+      text.includes('\u0627\u0644\u063A\u064A') || // Ø§Ù„ØºÙŠ
+      text.includes('\u0627\u0648\u0642\u0641') || // Ø§ÙˆÙ‚Ù
+      text.includes('\u0648\u0642\u0641') || // ÙˆÙ‚Ù
+      text.includes('\u062E\u0644\u0635') || // Ø®Ù„Øµ
+      text.includes('\u062E\u0644\u0627\u0635') // Ø®Ù„Ø§Øµ
     ) {
     if (typeof onStopTrip === 'function') {
       onStopTrip()

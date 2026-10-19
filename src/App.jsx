@@ -118,11 +118,11 @@ function speakArabic(text) {
   speakLock = true
   cancelAllVoice()
 
-  const release = () => { speakLock = false }
+  const release = () => { speakLock = false }  const safetyTimer = setTimeout(() => { release() }, 8000)
 
-  speakArabicViaServer(text).then(() => {
+  speakArabicViaServer(text).then(() => {    clearTimeout(safetyTimer)
     release()
-  }).catch(() => {
+  }).catch(() => {    clearTimeout(safetyTimer)
     release()
   })
 }
@@ -540,7 +540,7 @@ function App() {
       if (h === null) h = 0
       startMap.easeTo({
         center: [location.lng, location.lat],
-        zoom: 17,
+        zoom: 17.5,
         pitch: 55,
         bearing: h,
         padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
@@ -1085,6 +1085,12 @@ useEffect(() => {
     map.on('rotateend', onEnd)
     map.on('pitchstart', onStart)
     map.on('pitchend', onEnd)
+    const canvas = map.getCanvas()
+    canvas.addEventListener('pointerdown', onStart)
+    canvas.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('touchend', onEnd)
+    window.addEventListener('touchcancel', onEnd)
   }
   let rafId
   const step = () => {
@@ -1103,7 +1109,8 @@ useEffect(() => {
       m.setLngLat([sm.lng, sm.lat])
       if (typeof sm.heading === 'number') setMarkerRotation(sm.heading)
       if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
-        mapRef.current.jumpTo({ center: [sm.lng, sm.lat], bearing: sm.heading })
+        mapRef.current.setCenter([sm.lng, sm.lat]);
+        mapRef.current.setBearing(sm.heading)
       }
     }
     rafId = requestAnimationFrame(step)
@@ -1189,8 +1196,8 @@ const nextStep = useMemo(() => {
     
     // Initialize Waze-like 3D Mode (once at start)
     map.easeTo({
-      zoom: 17,
-      pitch: 60,
+      zoom: 17.5,
+      pitch: 55,
       padding: { top: 0, bottom: Math.round((map.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
       duration: 800,
       essential: true,
