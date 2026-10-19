@@ -79,7 +79,7 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
   setTimeout(() => {
     if (!isListening) return
     safeStart()
-  }, 1500)
+  }, 300)
 
   // Global mic window
   micWindowTimer = setTimeout(() => {

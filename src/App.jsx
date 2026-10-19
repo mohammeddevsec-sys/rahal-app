@@ -924,7 +924,7 @@ function App() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      if (!location) {
+      if (!location || !tripActive) {
         setNearbyReport(null)
         return
       }
@@ -937,6 +937,7 @@ function App() {
         if (r.resolvedAt) continue
         if (r.expiresAt && r.expiresAt <= now) continue
         const d = metersBetween(location, r)
+
         if (d < 200 && d < bestD) {
           bestD = d
           best = r
@@ -945,7 +946,7 @@ function App() {
       setNearbyReport(best)
     }, 0)
     return () => clearTimeout(id)
-  }, [location, reports])
+  }, [location, reports, tripActive])
 
   const handleConfirmNearby = useCallback(async (report) => {
     if (!report) return
@@ -1109,12 +1110,9 @@ useEffect(() => {
       m.setLngLat([sm.lng, sm.lat])
       if (typeof sm.heading === 'number') setMarkerRotation(180)
       if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
-        mapRef.current.jumpTo({
-          center: [sm.lng, sm.lat],
-          bearing: sm.heading,
-          pitch: 55,
-          padding: { top: 0, bottom: Math.round((mapRef.current.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 }
-        })
+        mapRef.current.setCenter([sm.lng, sm.lat]);
+        mapRef.current.setBearing(sm.heading);
+        mapRef.current.setPitch(55);
         // setBearing handled in jumpTo
       }
     }
@@ -1475,6 +1473,7 @@ const nextStep = useMemo(() => {
 
         {nearbyReport && (() => {
           const t = getReportType(nearbyReport.type)
+          console.log('UI_NEARBY: Type =', nearbyReport.type, '| getReportType =', t);
           if (!t) return null
           const dist = location ? Math.round(metersBetween(location, nearbyReport)) : 0
           return (
