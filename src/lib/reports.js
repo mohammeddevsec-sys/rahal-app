@@ -2,18 +2,18 @@
 const DEVICE_KEY = 'rahal.deviceId'
 
 export const REPORT_TYPES = [
-  { id: 'accident',      label: '\u062D\u0627\u062F\u062B',                                  color: '#dc2626', iconPath: '/icons_v3/accident.webp' },
-  { id: 'traffic',       label: '\u0627\u0632\u062F\u062D\u0627\u0645 \u0645\u062A\u0648\u0633\u0637', color: '#d97706', iconPath: '/icons_v3/traffic.webp' },
-  { id: 'traffic_heavy', label: '\u0627\u0632\u062F\u062D\u0627\u0645 \u0643\u0644\u064A',       color: '#991b1b', iconPath: '/icons_v3/traffic_heavy.webp' },
-  { id: 'hazard',        label: '\u062E\u0637\u0631',                                         color: '#ea580c', iconPath: '/icons_v3/hazard.webp' },
-  { id: 'road_work',     label: '\u0623\u0639\u0645\u0627\u0644 \u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642', color: '#ca8a04', iconPath: '/icons_v3/road_work.webp' },
-  { id: 'emergency',     label: '\u0637\u0648\u0627\u0631\u0626',                              color: '#dc2626', iconPath: '/icons_v3/emergency.webp' },
-  { id: 'bad_weather',   label: '\u0637\u0642\u0633 \u0633\u064A\u0626',                        color: '#475569', iconPath: '/icons_v3/bad_weather.webp' },
-  { id: 'checkpoint',    label: '\u0646\u0642\u0637\u0629 \u062A\u0641\u062A\u064A\u0634',      color: '#1e40af', iconPath: '/icons_v3/checkpoint.webp' },
-  { id: 'camera',        label: '\u0643\u0627\u0645\u064A\u0631\u0627',                        color: '#0e7490', iconPath: '/icons_v3/camera.webp' },
-  { id: 'speed_bump',    label: '\u0645\u0637\u0628',                                          color: '#334155', iconPath: '/icons_v3/speed_bump.webp' },
-  { id: 'fuel',          label: '\u0645\u062D\u0637\u0629 \u0648\u0642\u0648\u062F',            color: '#1e40af', iconPath: '/icons_v3/fuel.webp' },
-  { id: 'animals',       label: '\u062D\u064A\u0648\u0627\u0646\u0627\u062A \u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642', color: '#65a30d', iconPath: '/icons_v3/animals.webp' },
+  { id: 'accident',      label: '\u062D\u0627\u062F\u062B',                                  color: '#dc2626', iconPath: '/icons_v4/accident.webp' },
+  { id: 'traffic',       label: '\u0627\u0632\u062F\u062D\u0627\u0645 \u0645\u062A\u0648\u0633\u0637', color: '#d97706', iconPath: '/icons_v4/traffic.webp' },
+  { id: 'traffic_heavy', label: '\u0627\u0632\u062F\u062D\u0627\u0645 \u0643\u0644\u064A',       color: '#991b1b', iconPath: '/icons_v4/traffic_heavy.webp' },
+  { id: 'hazard',        label: '\u062E\u0637\u0631',                                         color: '#ea580c', iconPath: '/icons_v4/hazard.webp' },
+  { id: 'road_work',     label: '\u0623\u0639\u0645\u0627\u0644 \u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642', color: '#ca8a04', iconPath: '/icons_v4/road_work.webp' },
+  { id: 'emergency',     label: '\u0637\u0648\u0627\u0631\u0626',                              color: '#dc2626', iconPath: '/icons_v4/emergency.webp' },
+  { id: 'bad_weather',   label: '\u0637\u0642\u0633 \u0633\u064A\u0626',                        color: '#475569', iconPath: '/icons_v4/bad_weather.webp' },
+  { id: 'checkpoint',    label: '\u0646\u0642\u0637\u0629 \u062A\u0641\u062A\u064A\u0634',      color: '#1e40af', iconPath: '/icons_v4/checkpoint.webp' },
+  { id: 'camera',        label: '\u0643\u0627\u0645\u064A\u0631\u0627',                        color: '#0e7490', iconPath: '/icons_v4/camera.webp' },
+  { id: 'speed_bump',    label: '\u0645\u0637\u0628',                                          color: '#334155', iconPath: '/icons_v4/speed_bump.webp' },
+  { id: 'fuel',          label: '\u0645\u062D\u0637\u0629 \u0648\u0642\u0648\u062F',            color: '#1e40af', iconPath: '/icons_v4/fuel.webp' },
+  { id: 'animals',       label: '\u062D\u064A\u0648\u0627\u0646\u0627\u062A \u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642', color: '#65a30d', iconPath: '/icons_v4/animals.webp' },
 ]
 
 export function getReportType(id) {
