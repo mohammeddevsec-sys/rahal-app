@@ -924,7 +924,7 @@ function App() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      if (!location || !tripActive) {
+      if (!location) {
         setNearbyReport(null)
         return
       }
@@ -1062,10 +1062,16 @@ function App() {
 useEffect(() => {
   if (typeof window !== 'undefined') {
     window.__rahalSetPos = (lng, lat, heading) => {
-      markerTargetRef.current.lng = lng
-      markerTargetRef.current.lat = lat
-      if (typeof heading === 'number' && !isNaN(heading)) markerTargetRef.current.heading = heading
-    }
+        if (markerTargetRef.current.lat !== null) {
+          const dLat = lat - markerTargetRef.current.lat
+          const dLng = (lng - markerTargetRef.current.lng) * Math.cos(lat * Math.PI / 180)
+          const distMeters = Math.sqrt(dLat*dLat + dLng*dLng) * 111320
+          if (distMeters < 3) return // تجاهل اهتزاز الـ GPS
+        }
+        markerTargetRef.current.lng = lng
+        markerTargetRef.current.lat = lat
+        if (typeof heading === 'number' && !isNaN(heading)) markerTargetRef.current.heading = heading
+      }
     window.__rahalStopSim = () => {
       if (window.__rahalSimTimer) {
         clearInterval(window.__rahalSimTimer)
@@ -1473,7 +1479,6 @@ const nextStep = useMemo(() => {
 
         {nearbyReport && (() => {
           const t = getReportType(nearbyReport.type)
-          console.log('UI_NEARBY: Type =', nearbyReport.type, '| getReportType =', t);
           if (!t) return null
           const dist = location ? Math.round(metersBetween(location, nearbyReport)) : 0
           return (

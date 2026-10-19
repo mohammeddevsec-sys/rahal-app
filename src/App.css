@@ -2685,6 +2685,4 @@ button { cursor: pointer; }
   50% { opacity: 0; }
 }
 
-/* Hide nearby alerts completely */
-.nearby-alert { display: none !important; }
 
