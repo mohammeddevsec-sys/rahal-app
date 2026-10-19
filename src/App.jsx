@@ -1112,6 +1112,7 @@ useEffect(() => {
         mapRef.current.jumpTo({
           center: [sm.lng, sm.lat],
           bearing: sm.heading,
+          pitch: 55,
           padding: { top: 0, bottom: Math.round((mapRef.current.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 }
         })
         // setBearing handled in jumpTo
