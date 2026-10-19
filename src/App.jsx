@@ -1107,10 +1107,14 @@ useEffect(() => {
         sm.heading = (sm.heading + dh * k + 360) % 360
       }
       m.setLngLat([sm.lng, sm.lat])
-      if (typeof sm.heading === 'number') setMarkerRotation(sm.heading)
+      if (typeof sm.heading === 'number') setMarkerRotation(180)
       if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
-        mapRef.current.setCenter([sm.lng, sm.lat]);
-        mapRef.current.setBearing(sm.heading)
+        mapRef.current.jumpTo({
+          center: [sm.lng, sm.lat],
+          bearing: sm.heading,
+          padding: { top: 0, bottom: Math.round((mapRef.current.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 }
+        })
+        // setBearing handled in jumpTo
       }
     }
     rafId = requestAnimationFrame(step)
