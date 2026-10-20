@@ -115,6 +115,22 @@ button { cursor: pointer; }
   font-weight: 700;
 }
 
+.compass-btn {
+  border: 0;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf4ff;
+  color: #0b63ce;
+  cursor: pointer;
+  padding: 0;
+  will-change: transform;
+}
+.compass-btn:active { background: #d6e6ff; }
+
 .search-section {
   padding: 14px 16px 12px;
   background: #ffffff;

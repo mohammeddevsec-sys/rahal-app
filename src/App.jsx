@@ -181,6 +181,7 @@ function App() {
   useEffect(() => { tripActiveRef.current = tripActive }, [tripActive])
   const [muted, setMutedState] = useState(false)
   const { location, status, request } = useUserLocation()
+  const [compassBearing, setCompassBearing] = useState(0)
 
   useEffect(() => {
     const container = containerRef.current
@@ -193,6 +194,9 @@ function App() {
       if (cancelled) { map.remove(); return }
       localMap = map
       mapRef.current = map
+      const onCompass = () => { setCompassBearing(map.getBearing()) }
+      map.on('rotate', onCompass)
+      map.on('pitch', onCompass)
 
       map.on('load', () => {
         if (cancelled) return
@@ -1243,6 +1247,19 @@ const nextStep = useMemo(() => {
         </div>
         <button className="location-btn" type="button" onClick={goToUser}>
           {UI_TEXT.myLocation}
+        </button>
+        <button
+          className="compass-btn"
+          type="button"
+          aria-label="البوصلة"
+          onClick={() => { const m = mapRef.current; if (m) m.resetNorth({ duration: 400 }) }}
+          style={{ transform: `rotate(${-compassBearing}deg)`, transition: 'transform 80ms linear' }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2 L15 12 L12 22 L9 12 Z" fill="#e53935" />
+            <path d="M12 2 L15 12 L9 12 Z" fill="#e53935" />
+            <path d="M12 22 L15 12 L9 12 Z" fill="#90a4ae" />
+          </svg>
         </button>
       
         <div className="user-stats-badge" title="مستواك ونقاطك">
