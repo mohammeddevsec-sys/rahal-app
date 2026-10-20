@@ -517,12 +517,12 @@ function App() {
 
   const zoomIn = useCallback(() => {
     const m = mapRef.current
-    if (m) m.zoomIn()
+    if (m) m.setZoom(Math.min(m.getZoom() + 1.5, 22))
   }, [])
 
   const zoomOut = useCallback(() => {
     const m = mapRef.current
-    if (m) m.zoomOut()
+    if (m) m.setZoom(Math.max(m.getZoom() - 1.5, 3))
   }, [])
 
   const startTrip = useCallback(() => {
