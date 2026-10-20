@@ -1460,6 +1460,13 @@ const nextStep = useMemo(() => {
                   try { m.touchZoomRotate.disableRotation(); } catch { /* noop */ }
                   followLockRef.current = true;
                   setFollowLocked(true);
+                  const smc = markerSmoothRef.current;
+                  const tgt = markerTargetRef.current;
+                  if (smc && tgt) {
+                    if (typeof tgt.lng === 'number' && !isNaN(tgt.lng)) smc.lng = tgt.lng;
+                    if (typeof tgt.lat === 'number' && !isNaN(tgt.lat)) smc.lat = tgt.lat;
+                    if (typeof tgt.heading === 'number' && !isNaN(tgt.heading)) smc.heading = tgt.heading;
+                  }
                   try { m.stop(); } catch { /* noop */ }
                   try { m.setPitch(55); } catch { /* noop */ }
                 }
