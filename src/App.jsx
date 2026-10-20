@@ -11,7 +11,7 @@ import { spokenDistancePhrase } from './lib/arabic.js'
 import { loadSearchHistory, addSearchHistory, removeSearchHistory, clearSearchHistory } from './lib/searchHistory.js'
 import { loadPlace, savePlace, clearPlace, HOME_KEY, WORK_KEY } from './lib/savedPlaces.js'
 import { REPORT_TYPES, getReportType, fetchActiveReports, addReport, confirmReport, resolveReport } from './lib/reports.js'
-import { speakArabicViaServer, stopSpeaking, isTtsAvailable, prefetchArabic, setMuted } from './lib/tts.js'
+import { speakArabicViaServer, stopSpeaking, isTtsAvailable, prefetchArabic } from './lib/tts.js'
 import { toggleVoiceControl } from './lib/voiceControl.js'
 import './App.css'
 
@@ -179,9 +179,7 @@ function App() {
   const tripActiveRef = useRef(false)
   const isDraggingRef = useRef(false)
   useEffect(() => { tripActiveRef.current = tripActive }, [tripActive])
-  const [muted, setMutedState] = useState(false)
   const { location, status, request } = useUserLocation()
-  const [compassBearing, setCompassBearing] = useState(0)
 
   useEffect(() => {
     const container = containerRef.current
@@ -194,9 +192,6 @@ function App() {
       if (cancelled) { map.remove(); return }
       localMap = map
       mapRef.current = map
-      const onCompass = () => { setCompassBearing(map.getBearing()) }
-      map.on('rotate', onCompass)
-      map.on('pitch', onCompass)
 
       map.on('load', () => {
         if (cancelled) return
@@ -1251,15 +1246,21 @@ const nextStep = useMemo(() => {
         <button
           className="compass-btn"
           type="button"
-          aria-label="البوصلة"
-          onClick={() => { const m = mapRef.current; if (m) m.resetNorth({ duration: 400 }) }}
-          style={{ transform: `rotate(${-compassBearing}deg)`, transition: 'transform 80ms linear' }}
+          aria-label="إعادة التوجيه"
+          onClick={() => {
+            const m = mapRef.current;
+            if (!m) return;
+            let h = 0;
+            if (location && typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading;
+            else if (destinationRef.current && location) {
+              const dLat = destinationRef.current.lat - location.lat;
+              const dLng = (destinationRef.current.lng - location.lng) * Math.cos(location.lat * Math.PI / 180);
+              if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
+            }
+            m.easeTo({ pitch: 55, bearing: h, duration: 600, essential: true });
+          }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2 L15 12 L12 22 L9 12 Z" fill="#e53935" />
-            <path d="M12 2 L15 12 L9 12 Z" fill="#e53935" />
-            <path d="M12 22 L15 12 L9 12 Z" fill="#90a4ae" />
-          </svg>
+          <img src="/icons/recenter.png" alt="إعادة التوجيه" />
         </button>
       
         <div className="user-stats-badge" title="مستواك ونقاطك">
@@ -1405,8 +1406,24 @@ const nextStep = useMemo(() => {
               <div className="nav-waze-distance">{formatDistanceArabic(nextStep.distanceToStep)}</div>
               <div className="nav-waze-street">{nextStep.instruction}</div>
             </div>
-            <button type="button" className={"nav-waze-mute" + (muted ? " muted-on" : "")} onClick={() => { const nv = !muted; setMutedState(nv); setMuted(nv); if (nv) stopSpeaking() }} aria-label="{'\u0643\u062A\u0645'}">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 5L6 9H2V15H6L11 19V5Z" fill="#ffffff"/><path d="M16 8a5 5 0 0 1 0 8" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/></svg>
+            <button
+              type="button"
+              className="nav-waze-recenter"
+              onClick={() => {
+                const m = mapRef.current;
+                if (!m) return;
+                let h = 0;
+                if (location && typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading;
+                else if (destinationRef.current && location) {
+                  const dLat = destinationRef.current.lat - location.lat;
+                  const dLng = (destinationRef.current.lng - location.lng) * Math.cos(location.lat * Math.PI / 180);
+                  if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
+                }
+                m.easeTo({ pitch: 55, bearing: h, duration: 600, essential: true });
+              }}
+              aria-label="إعادة التوجيه"
+            >
+              <img src="/icons/recenter.png" alt="إعادة التوجيه" />
             </button>
             <button type="button" className="nav-waze-exit" onClick={stopTrip} aria-label="{'\u0625\u064A\u0642\u0627\u0641'}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6L18 18M6 18L18 6" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round"/></svg></button>
           </div>
