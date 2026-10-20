@@ -11,7 +11,7 @@ let silenceTimer = null
 let accumText = ''
 let lastCommandAt = 0
 
-const MIC_WINDOW_MS = 20000
+const MIC_WINDOW_MS = 4500
 const SILENCE_MS = 2500
 const COOLDOWN_MS = 2500
 
