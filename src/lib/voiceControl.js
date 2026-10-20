@@ -73,13 +73,10 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
   // onStateChange(true) moved to onstart
 
   stopSpeaking()
-  say('\u0623\u0647\u0644\u0627 \u0628\u0643')
-
-  // Start recognition after welcome message finishes
-  setTimeout(() => {
+  say('\u0623\u0647\u0644\u0627 \u0628\u0643').then(() => {
     if (!isListening) return
     safeStart()
-  }, 300)
+  })
 
   // Global mic window
   micWindowTimer = setTimeout(() => {

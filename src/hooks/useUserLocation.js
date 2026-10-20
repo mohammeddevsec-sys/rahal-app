@@ -16,7 +16,15 @@ export function useUserLocation() {
     if (stopWatchRef.current) return
     stopWatchRef.current = watchPosition(
       (pos) => {
-        setLocation({ lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy })
+        if (typeof pos.lat === 'number' && typeof pos.lng === 'number' && !isNaN(pos.lat) && !isNaN(pos.lng)) {
+                  setLocation({ 
+                    lat: pos.lat, 
+                    lng: pos.lng, 
+                    accuracy: pos.accuracy,
+                    heading: pos.heading ?? pos.coords?.heading ?? null,
+                    speed: pos.speed ?? pos.coords?.speed ?? null
+                  })
+                }
         setStatus(GEO_STATUS.GRANTED)
         setError(null)
       },
@@ -44,7 +52,15 @@ export function useUserLocation() {
     setError(null)
     try {
       const pos = await getCurrentPosition()
-      setLocation({ lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy })
+      if (typeof pos.lat === 'number' && typeof pos.lng === 'number' && !isNaN(pos.lat) && !isNaN(pos.lng)) {
+                  setLocation({ 
+                    lat: pos.lat, 
+                    lng: pos.lng, 
+                    accuracy: pos.accuracy,
+                    heading: pos.heading ?? pos.coords?.heading ?? null,
+                    speed: pos.speed ?? pos.coords?.speed ?? null
+                  })
+                }
       setStatus(GEO_STATUS.GRANTED)
       startWatch()
       return pos

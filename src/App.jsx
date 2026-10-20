@@ -280,10 +280,15 @@ function App() {
   useEffect(() => {
     const map = mapRef.current
     if (!mapReady || !map || !location) return
-    const { lat, lng, accuracy, heading } = location
+          const { lat, lng, accuracy, heading } = location
 
-    markerTargetRef.current.lng = lng
-    markerTargetRef.current.lat = lat
+          // حماية من إحداثيات NaN (تمنع القفز العشوائي)
+          if (typeof lat !== 'number' || isNaN(lat) || typeof lng !== 'number' || isNaN(lng)) {
+            return;
+          }
+
+          markerTargetRef.current.lng = lng
+          markerTargetRef.current.lat = lat
     if (typeof heading === 'number' && !isNaN(heading)) markerTargetRef.current.heading = heading
 
     const src = map.getSource('accuracy')
@@ -1104,7 +1109,7 @@ useEffect(() => {
     const m = markerRef.current
     const tgt = markerTargetRef.current
     const sm = markerSmoothRef.current
-    if (m && tgt.lng !== null && tgt.lat !== null) {
+    if (m && typeof tgt.lng === 'number' && typeof tgt.lat === 'number' && !isNaN(tgt.lng) && !isNaN(tgt.lat)) {
       if (sm.lng === null) { sm.lng = tgt.lng; sm.lat = tgt.lat; sm.heading = tgt.heading || 0 }
       const k = 0.18
       sm.lng += (tgt.lng - sm.lng) * k
