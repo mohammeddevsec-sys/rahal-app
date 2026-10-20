@@ -284,7 +284,23 @@ function App() {
 
           markerTargetRef.current.lng = lng
           markerTargetRef.current.lat = lat
-    if (typeof heading === 'number' && !isNaN(heading)) markerTargetRef.current.heading = heading
+          let effHeading = heading
+          const spd = typeof location.speed === 'number' ? Math.abs(location.speed) : 0
+          if (typeof effHeading !== 'number' || isNaN(effHeading) || spd < 0.5) {
+            const dest = destinationRef.current
+            if (dest) {
+              const dLat = dest.lat - lat
+              const dLng = (dest.lng - lng) * Math.cos(lat * Math.PI / 180)
+              if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) {
+                effHeading = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
+              } else {
+                effHeading = markerTargetRef.current.heading
+              }
+            } else {
+              effHeading = markerTargetRef.current.heading
+            }
+          }
+          if (typeof effHeading === 'number' && !isNaN(effHeading)) markerTargetRef.current.heading = effHeading
 
     const src = map.getSource('accuracy')
     if (src && accuracy && accuracy > 0) {
@@ -1426,13 +1442,6 @@ const nextStep = useMemo(() => {
                   try { m.stop(); } catch { /* noop */ }
                   try { m.setPitch(0); } catch { /* noop */ }
                 } else {
-                  let h = 0;
-                  if (location && typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading;
-                  else if (destinationRef.current && location) {
-                    const dLat = destinationRef.current.lat - location.lat;
-                    const dLng = (destinationRef.current.lng - location.lng) * Math.cos(location.lat * Math.PI / 180);
-                    if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
-                  }
                   try { m.dragPan.disable(); } catch { /* noop */ }
                   try { m.touchPitch.disable(); } catch { /* noop */ }
                   try { m.touchZoomRotate.disableRotation(); } catch { /* noop */ }
@@ -1440,7 +1449,6 @@ const nextStep = useMemo(() => {
                   setFollowLocked(true);
                   try { m.stop(); } catch { /* noop */ }
                   try { m.setPitch(55); } catch { /* noop */ }
-                  try { m.setBearing(h); } catch { /* noop */ }
                 }
               }}
               aria-label={followLocked ? 'إلغاء التثبيت' : 'تثبيت الكاميرا خلف السهم'}
