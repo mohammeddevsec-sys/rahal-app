@@ -1123,8 +1123,6 @@ useEffect(() => {
       if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
         mapRef.current.setCenter([sm.lng, sm.lat]);
         mapRef.current.setBearing(sm.heading);
-        mapRef.current.setPitch(55);
-        // setBearing handled in jumpTo
       }
     }
     rafId = requestAnimationFrame(step)
