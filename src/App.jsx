@@ -819,6 +819,19 @@ function App() {
       const img = document.createElement('img')
       img.src = t.iconPath
       img.alt = t.label
+      let dup = 0
+      const cosLat = Math.cos(r.lat * Math.PI / 180)
+      for (let j = 0; j < i; j++) {
+        const o = reports[j]
+        const dLat = (o.lat - r.lat) * 111320
+        const dLng = (o.lng - r.lng) * 111320 * cosLat
+        if (Math.sqrt(dLat * dLat + dLng * dLng) < 25) dup++
+      }
+      if (dup > 0) {
+        const ang = dup * 2.399963
+        const rad = 16 + Math.floor(dup / 6) * 14
+        img.style.transform = 'translate(' + (Math.cos(ang) * rad).toFixed(1) + 'px, ' + (Math.sin(ang) * rad).toFixed(1) + 'px)'
+      }
       el.appendChild(img)
       const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat([r.lng, r.lat])
