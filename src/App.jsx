@@ -166,13 +166,6 @@ function App() {
 
   const typingWarnedRef = useRef(false)
 
-  const setMarkerRotation = (deg) => {
-    const el = markerRef.current && markerRef.current.getElement()
-    if (!el) return
-    const svg = el.querySelector('svg')
-    if (!svg) return
-    svg.style.transform = 'rotate(' + deg + 'deg)'
-  }
 
 
   const [tripActive, setTripActive] = useState(false)
@@ -1131,7 +1124,6 @@ useEffect(() => {
         sm.heading = (sm.heading + dh * k + 360) % 360
       }
       m.setLngLat([sm.lng, sm.lat])
-      if (typeof sm.heading === 'number') setMarkerRotation(180)
       if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
         mapRef.current.setCenter([sm.lng, sm.lat]);
         mapRef.current.setBearing(sm.heading);
