@@ -2736,3 +2736,10 @@ button { cursor: pointer; }
   pointer-events: none !important;
 }
 .nav-waze-recenter:active { opacity: 0.75 !important; }
+
+
+/* Locked state: blue ring */
+.nav-waze-recenter.is-locked {
+  box-shadow: 0 0 0 3px #0b63ce, 0 0 12px rgba(11,99,206,0.55) !important;
+  background: rgba(11,99,206,0.08) !important;
+}
