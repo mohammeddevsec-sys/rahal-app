@@ -1744,7 +1744,7 @@ button { cursor: pointer; }
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45);
 }
-/* nav-report: Ø¥Ø®ÙØ§Ø¡ Ø§Ù„Ø®Ø±ÙŠØ·Ø©ØŒ Ø¹Ø±Ø¶ Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¨Ù„Ø§Øº Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø±Ø­Ù„Ø© */
+/* nav-report: إخفاء الصفحة الرئيسية عند فتح لوحة الإبلاغ أثناء الرحلة */
 .rahal-app.nav-mode.nav-report .home-view {
   display: none !important;
 }
