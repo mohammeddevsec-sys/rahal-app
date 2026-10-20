@@ -178,6 +178,8 @@ function App() {
   const [tripActive, setTripActive] = useState(false)
   const tripActiveRef = useRef(false)
   const isDraggingRef = useRef(false)
+  const followLockRef = useRef(false)
+  const [followLocked, setFollowLocked] = useState(false)
   useEffect(() => { tripActiveRef.current = tripActive }, [tripActive])
   const { location, status, request } = useUserLocation()
 
@@ -194,6 +196,7 @@ function App() {
       mapRef.current = map
 
       map.on('load', () => {
+        map.on('moveend', () => { if (followLockRef.current) { try { if (Math.abs(map.getPitch() - 55) > 1) map.setPitch(55); } catch { /* noop */ } } })
         if (cancelled) return
 
         map.addSource('accuracy', {
@@ -556,7 +559,17 @@ function App() {
 
   
   const stopTrip = useCallback(() => {
-    console.log("STOP_TRIP_EXECUTED");
+    console.log("STOP_TRIP_EXECUTED")
+    if (followLockRef.current) {
+      followLockRef.current = false;
+      setFollowLocked(false);
+      const m0 = mapRef.current;
+      if (m0) {
+        try { m0.dragPan.enable(); } catch { /* noop */ }
+        try { m0.touchPitch.enable(); } catch { /* noop */ }
+        try { m0.touchZoomRotate.enableRotation(); } catch { /* noop */ }
+      }
+    };
     setTripActive(false)
     stopSpeaking()
     const navReset = mapRef.current
@@ -1408,22 +1421,37 @@ const nextStep = useMemo(() => {
             </div>
             <button
               type="button"
-              className="nav-waze-recenter"
+              className={'nav-waze-recenter' + (followLocked ? ' is-locked' : '')}
               onClick={() => {
                 const m = mapRef.current;
                 if (!m) return;
-                let h = 0;
-                if (location && typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading;
-                else if (destinationRef.current && location) {
-                  const dLat = destinationRef.current.lat - location.lat;
-                  const dLng = (destinationRef.current.lng - location.lng) * Math.cos(location.lat * Math.PI / 180);
-                  if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
+                if (followLockRef.current) {
+                  followLockRef.current = false;
+                  setFollowLocked(false);
+                  try { m.dragPan.enable(); } catch { /* noop */ }
+                  try { m.touchPitch.enable(); } catch { /* noop */ }
+                  try { m.touchZoomRotate.enableRotation(); } catch { /* noop */ }
+                  m.easeTo({ pitch: 0, bearing: 0, duration: 600, essential: true });
+                } else {
+                  let h = 0;
+                  if (location && typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading;
+                  else if (destinationRef.current && location) {
+                    const dLat = destinationRef.current.lat - location.lat;
+                    const dLng = (destinationRef.current.lng - location.lng) * Math.cos(location.lat * Math.PI / 180);
+                    if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
+                  }
+                  try { m.dragPan.disable(); } catch { /* noop */ }
+                  try { m.touchPitch.disable(); } catch { /* noop */ }
+                  try { m.touchZoomRotate.disableRotation(); } catch { /* noop */ }
+                  followLockRef.current = true;
+                  setFollowLocked(true);
+                  m.easeTo({ pitch: 55, bearing: h, duration: 600, essential: true });
                 }
-                m.easeTo({ pitch: 55, bearing: h, duration: 600, essential: true });
               }}
-              aria-label="إعادة التوجيه"
+              aria-label={followLocked ? 'إلغاء التثبيت' : 'تثبيت الكاميرا خلف السهم'}
+              title={followLocked ? 'إلغاء التثبيت' : 'تثبيت الكاميرا خلف السهم'}
             >
-              <img src="/icons/recenter.png" alt="إعادة التوجيه" />
+              <img src="/icons/recenter.png" alt="" />
             </button>
             <button type="button" className="nav-waze-exit" onClick={stopTrip} aria-label="{'\u0625\u064A\u0642\u0627\u0641'}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6L18 18M6 18L18 6" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round"/></svg></button>
           </div>
