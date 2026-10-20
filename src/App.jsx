@@ -1431,7 +1431,8 @@ const nextStep = useMemo(() => {
                   try { m.dragPan.enable(); } catch { /* noop */ }
                   try { m.touchPitch.enable(); } catch { /* noop */ }
                   try { m.touchZoomRotate.enableRotation(); } catch { /* noop */ }
-                  m.easeTo({ pitch: 0, bearing: 0, duration: 600, essential: true });
+                  try { m.stop(); } catch { /* noop */ }
+                  try { m.setPitch(0); } catch { /* noop */ }
                 } else {
                   let h = 0;
                   if (location && typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading;
@@ -1445,7 +1446,9 @@ const nextStep = useMemo(() => {
                   try { m.touchZoomRotate.disableRotation(); } catch { /* noop */ }
                   followLockRef.current = true;
                   setFollowLocked(true);
-                  m.easeTo({ pitch: 55, bearing: h, duration: 600, essential: true });
+                  try { m.stop(); } catch { /* noop */ }
+                  try { m.setPitch(55); } catch { /* noop */ }
+                  try { m.setBearing(h); } catch { /* noop */ }
                 }
               }}
               aria-label={followLocked ? 'إلغاء التثبيت' : 'تثبيت الكاميرا خلف السهم'}
