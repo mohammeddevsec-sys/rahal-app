@@ -12,28 +12,66 @@ export function useUserLocation() {
   const [error, setError] = useState(null)
   const stopWatchRef = useRef(null)
 
+  const lastSpeedRef = useRef(null)
+  const lastHeadingRef = useRef(null)
+
+  const processPosition = useCallback((pos) => {
+    if (typeof pos.lat !== 'number' || typeof pos.lng !== 'number' || isNaN(pos.lat) || isNaN(pos.lng)) {
+      return null
+    }
+
+    const rawSpeed = (typeof pos.speed === 'number' && Number.isFinite(pos.speed) && pos.speed >= 0) ? pos.speed : null
+    let smoothedSpeed = lastSpeedRef.current
+    if (rawSpeed !== null) {
+      if (smoothedSpeed === null) smoothedSpeed = rawSpeed
+      else smoothedSpeed = 0.3 * rawSpeed + 0.7 * smoothedSpeed
+      if (smoothedSpeed < 0.3) smoothedSpeed = 0
+      lastSpeedRef.current = smoothedSpeed
+    }
+
+    const rawHeading = (typeof pos.heading === 'number' && Number.isFinite(pos.heading)) ? pos.heading : null
+    let smoothedHeading = lastHeadingRef.current
+    const effectiveSpeed = smoothedSpeed !== null ? smoothedSpeed : 0
+
+    if (rawHeading !== null && effectiveSpeed > 1.5) {
+      if (smoothedHeading === null) {
+        smoothedHeading = rawHeading
+      } else {
+        let diff = ((rawHeading - smoothedHeading + 540) % 360) - 180
+        if (Math.abs(diff) > 60 && effectiveSpeed < 7) {
+          diff = 0
+        }
+        smoothedHeading = (smoothedHeading + diff * 0.2 + 360) % 360
+      }
+      lastHeadingRef.current = smoothedHeading
+    }
+
+    return {
+      lat: pos.lat,
+      lng: pos.lng,
+      accuracy: pos.accuracy,
+      heading: smoothedHeading,
+      speed: smoothedSpeed
+    }
+  }, [])
+
   const startWatch = useCallback(() => {
     if (stopWatchRef.current) return
     stopWatchRef.current = watchPosition(
       (pos) => {
-        if (typeof pos.lat === 'number' && typeof pos.lng === 'number' && !isNaN(pos.lat) && !isNaN(pos.lng)) {
-                  setLocation({ 
-                    lat: pos.lat, 
-                    lng: pos.lng, 
-                    accuracy: pos.accuracy,
-                    heading: pos.heading ?? pos.coords?.heading ?? null,
-                    speed: pos.speed ?? pos.coords?.speed ?? null
-                  })
-                }
-        setStatus(GEO_STATUS.GRANTED)
-        setError(null)
+        const smoothed = processPosition(pos)
+        if (smoothed) {
+          setLocation(smoothed)
+          setStatus(GEO_STATUS.GRANTED)
+          setError(null)
+        }
       },
       (err) => {
         setStatus(err.status)
         setError(err)
       }
     )
-  }, [])
+  }, [processPosition])
 
   const stopWatch = useCallback(() => {
     if (stopWatchRef.current) {
@@ -52,15 +90,10 @@ export function useUserLocation() {
     setError(null)
     try {
       const pos = await getCurrentPosition()
-      if (typeof pos.lat === 'number' && typeof pos.lng === 'number' && !isNaN(pos.lat) && !isNaN(pos.lng)) {
-                  setLocation({ 
-                    lat: pos.lat, 
-                    lng: pos.lng, 
-                    accuracy: pos.accuracy,
-                    heading: pos.heading ?? pos.coords?.heading ?? null,
-                    speed: pos.speed ?? pos.coords?.speed ?? null
-                  })
-                }
+      const smoothed = processPosition(pos)
+      if (smoothed) {
+        setLocation(smoothed)
+      }
       setStatus(GEO_STATUS.GRANTED)
       startWatch()
       return pos
@@ -69,7 +102,7 @@ export function useUserLocation() {
       setError(err)
       return null
     }
-  }, [startWatch])
+  }, [startWatch, processPosition])
 
   useEffect(() => {
     const id = setTimeout(() => { request() }, 0)

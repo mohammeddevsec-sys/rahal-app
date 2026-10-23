@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Marker } from 'maplibre-gl'
 import { useUserLocation } from './hooks/useUserLocation.js'
 import { GEO_STATUS } from './lib/geolocation.js'
@@ -189,7 +189,7 @@ function App() {
       mapRef.current = map
 
       map.on('load', () => {
-        map.on('moveend', () => { if (followLockRef.current) { try { if (Math.abs(map.getPitch() - 55) > 1) map.setPitch(55); } catch { /* noop */ } } })
+        /* moveend pitch lock removed */
         if (cancelled) return
 
         map.addSource('accuracy', {
@@ -215,14 +215,14 @@ function App() {
           type: 'line',
           source: ROUTE_SOURCE,
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#162e1a', 'line-width': 6, 'line-opacity': 1 },
+          paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 1 },
         })
         map.addLayer({
           id: ROUTE_LAYER_LINE,
           type: 'line',
           source: ROUTE_SOURCE,
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#2ecc71', 'line-width': 4, 'line-opacity': 1 },
+          paint: { 'line-color': '#0b63ce', 'line-width': 6, 'line-opacity': 1 },
         })
 
         map.addSource('traffic-moderate', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -231,7 +231,7 @@ function App() {
           type: 'line',
           source: 'traffic-moderate',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#f87171', 'line-width': 8, 'line-opacity': 0.85 },
+          paint: { 'line-color': '#f59e0b', 'line-width': 6, 'line-opacity': 1 },
         })
         map.addSource('traffic-heavy', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
         map.addLayer({
@@ -239,7 +239,7 @@ function App() {
           type: 'line',
           source: 'traffic-heavy',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#991b1b', 'line-width': 8, 'line-opacity': 0.9 },
+          paint: { 'line-color': '#dc2626', 'line-width': 6, 'line-opacity': 1 },
         })
 
         const el = document.createElement('div')
@@ -286,21 +286,24 @@ function App() {
           markerTargetRef.current.lat = lat
           let effHeading = heading
           const spd = typeof location.speed === 'number' ? Math.abs(location.speed) : 0
-          if (typeof effHeading !== 'number' || isNaN(effHeading) || spd < 0.5) {
-            const dest = destinationRef.current
-            if (dest) {
-              const dLat = dest.lat - lat
-              const dLng = (dest.lng - lng) * Math.cos(lat * Math.PI / 180)
-              if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) {
-                effHeading = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
-              } else {
-                effHeading = markerTargetRef.current.heading
-              }
+          const previousHeading = markerTargetRef.current.heading
+          if (typeof effHeading !== 'number' || !Number.isFinite(effHeading) || spd < 1.2) {
+            if (typeof previousHeading === 'number' && Number.isFinite(previousHeading)) {
+              effHeading = previousHeading
             } else {
-              effHeading = markerTargetRef.current.heading
+              const dest = destinationRef.current
+              if (dest) {
+                const dLat = dest.lat - lat
+                const dLng = (dest.lng - lng) * Math.cos(lat * Math.PI / 180)
+                if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) {
+                  effHeading = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
+                }
+              }
             }
           }
-          if (typeof effHeading === 'number' && !isNaN(effHeading)) markerTargetRef.current.heading = effHeading
+          if (typeof effHeading === 'number' && Number.isFinite(effHeading)) {
+            markerTargetRef.current.heading = ((effHeading % 360) + 360) % 360
+          }
 
     const src = map.getSource('accuracy')
     if (src && accuracy && accuracy > 0) {
@@ -526,7 +529,15 @@ function App() {
   }, [])
 
   const startTrip = useCallback(() => {
-    if (!routeInfo) return
+    if (!routeInfo) { speakArabic('\u0627\u0644\u0631\u062c\u0627\u0621 \u0627\u062e\u062a\u064a\u0627\u0631 \u0648\u062c\u0647\u0629 \u0623\u0648\u0644\u0627\u064b'); return }
+    followLockRef.current = true
+    setFollowLocked(true)
+    const navControlMap = mapRef.current
+    if (navControlMap) {
+      try { navControlMap.dragPan.disable() } catch { /* noop */ }
+      try { navControlMap.touchPitch.disable() } catch { /* noop */ }
+      try { navControlMap.touchZoomRotate.disableRotation() } catch { /* noop */ }
+    }
     setTripActive(true)
     speakArabic(UI_TEXT.tripStarted + '\u060C \u0642\u064F\u062F \u0628\u062D\u0630\u0631')
     typingWarnedRef.current = false
@@ -542,27 +553,34 @@ function App() {
       ).then((route) => { if (route) applyRoute(route) }).catch(() => {})
     }
     const startMap = mapRef.current
-    if (startMap && location) {
-      let h = null
-      if (typeof location.heading === 'number' && !isNaN(location.heading)) h = location.heading
-      if (h === null) {
-        const dest = destinationRef.current
-        if (dest) {
-          const dLat = dest.lat - location.lat
-          const dLng = (dest.lng - location.lng) * Math.cos(location.lat * Math.PI / 180)
-          if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
-        }
-      }
-      if (h === null) h = 0
-      startMap.easeTo({
-        center: [location.lng, location.lat],
+    if (startMap) {
+      const cameraOptions = {
         zoom: 17.5,
         pitch: 55,
-        bearing: h,
         padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
         duration: 900,
         essential: true,
-      })
+      }
+      if (location) {
+        let h = markerTargetRef.current.heading
+        const startSpeed = typeof location.speed === 'number' ? Math.abs(location.speed) : 0
+        if (typeof location.heading === 'number' && Number.isFinite(location.heading) && startSpeed >= 1.2) {
+          h = location.heading
+        }
+        if (typeof h !== 'number' || !Number.isFinite(h)) {
+          const dest = destinationRef.current
+          if (dest) {
+            const dLat = dest.lat - location.lat
+            const dLng = (dest.lng - location.lng) * Math.cos(location.lat * Math.PI / 180)
+            if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
+          }
+        }
+        if (typeof h !== 'number' || !Number.isFinite(h)) h = 0
+        h = ((h % 360) + 360) % 360
+        cameraOptions.center = [location.lng, location.lat]
+        cameraOptions.bearing = h
+      }
+      startMap.easeTo(cameraOptions)
     }
   }, [routeInfo, location, applyRoute])
 
@@ -891,7 +909,8 @@ function App() {
     if (!coords || coords.length < 2) { clearAll(); return }
 
     const RADIUS_M = 50
-    const MODERATE_THRESHOLD = 3
+    const ORANGE_THRESHOLD = 1
+    const RED_THRESHOLD = 3
     const moderateSegs = []
     const heavySegs = []
     let curMod = []
@@ -900,21 +919,17 @@ function App() {
     for (let i = 0; i < coords.length; i++) {
       const p = coords[i]
       let count = 0
-      let hasHeavy = false
       for (let j = 0; j < reports.length; j++) {
         const r = reports[j]
         if (r.type !== 'traffic' && r.type !== 'traffic_heavy') continue
         const d = metersBetween({ lat: p[1], lng: p[0] }, r)
-        if (d <= RADIUS_M) {
-          count++
-          if (r.type === 'traffic_heavy') hasHeavy = true
-        }
+        if (d <= RADIUS_M) count++
       }
-      if (hasHeavy) {
+      if (count >= RED_THRESHOLD) {
         if (curMod.length >= 2) moderateSegs.push(curMod)
         curMod = []
         curHeavy.push(p)
-      } else if (count >= MODERATE_THRESHOLD) {
+      } else if (count >= ORANGE_THRESHOLD) {
         if (curHeavy.length >= 2) heavySegs.push(curHeavy)
         curHeavy = []
         curMod.push(p)
@@ -1145,17 +1160,21 @@ useEffect(() => {
     const sm = markerSmoothRef.current
     if (m && typeof tgt.lng === 'number' && typeof tgt.lat === 'number' && !isNaN(tgt.lng) && !isNaN(tgt.lat)) {
       if (sm.lng === null) { sm.lng = tgt.lng; sm.lat = tgt.lat; sm.heading = tgt.heading || 0 }
-      const k = 0.18
-      sm.lng += (tgt.lng - sm.lng) * k
-      sm.lat += (tgt.lat - sm.lat) * k
-      if (tgt.heading !== null && tgt.heading !== undefined && !isNaN(tgt.heading)) {
+      const positionK = 0.18
+      const headingK = 0.15
+      sm.lng += (tgt.lng - sm.lng) * positionK
+      sm.lat += (tgt.lat - sm.lat) * positionK
+      if (typeof tgt.heading === 'number' && Number.isFinite(tgt.heading)) {
         const dh = ((tgt.heading - sm.heading + 540) % 360) - 180
-        sm.heading = (sm.heading + dh * k + 360) % 360
+        if (Math.abs(dh) >= 2.0) {
+          sm.heading = (sm.heading + dh * headingK + 360) % 360
+        }
       }
       m.setLngLat([sm.lng, sm.lat])
-      if (mapRef.current && tripActiveRef.current && !isDraggingRef.current) {
-        mapRef.current.setCenter([sm.lng, sm.lat]);
-        mapRef.current.setBearing(sm.heading);
+      const cameraMap = mapRef.current
+      if (cameraMap && tripActiveRef.current && followLockRef.current && !isDraggingRef.current) {
+        cameraMap.setCenter([sm.lng, sm.lat])
+        cameraMap.setBearing(sm.heading)
       }
     }
     rafId = requestAnimationFrame(step)
@@ -1234,20 +1253,6 @@ const nextStep = useMemo(() => {
     }
   }, [tripActive, nextStep])
 
-  useEffect(() => {
-    if (!tripActive) return
-    const map = mapRef.current
-    if (!map) return
-    
-    // Initialize Waze-like 3D Mode (once at start)
-    map.easeTo({
-      zoom: 17.5,
-      pitch: 55,
-      padding: { top: 0, bottom: Math.round((map.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
-      duration: 800,
-      essential: true,
-    })
-  }, [tripActive])
 
   const [arrivalTimeText, setArrivalTimeText] = useState('--:--')
 
