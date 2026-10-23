@@ -534,7 +534,7 @@ function App() {
     setFollowLocked(true)
     const navControlMap = mapRef.current
     if (navControlMap) {
-      try { navControlMap.dragPan.disable() } catch { /* noop */ }
+      try { navControlMap.dragPan.enable() } catch { /* noop */ }
       try { navControlMap.touchPitch.disable() } catch { /* noop */ }
       try { navControlMap.touchZoomRotate.disableRotation() } catch { /* noop */ }
     }
@@ -580,7 +580,8 @@ function App() {
         cameraOptions.center = [location.lng, location.lat]
         cameraOptions.bearing = h
       }
-      startMap.easeTo(cameraOptions)
+      startMap.stop()
+      startMap.jumpTo(cameraOptions)
     }
   }, [routeInfo, location, applyRoute])
 
@@ -1139,12 +1140,21 @@ useEffect(() => {
   const map = mapRef.current
   if (map) {
     const onStart = () => { isDraggingRef.current = true }
+    const onManualStart = () => {
+      onStart()
+      if (tripActiveRef.current && followLockRef.current) {
+        followLockRef.current = false
+        setFollowLocked(false)
+        try { map.touchPitch.enable() } catch { /* noop */ }
+        try { map.touchZoomRotate.enableRotation() } catch { /* noop */ }
+      }
+    }
     const onEnd = () => { isDraggingRef.current = false }
-    map.on('dragstart', onStart)
+    map.on('dragstart', onManualStart)
     map.on('dragend', onEnd)
-    map.on('rotatestart', onStart)
+    map.on('rotatestart', onManualStart)
     map.on('rotateend', onEnd)
-    map.on('pitchstart', onStart)
+    map.on('pitchstart', onManualStart)
     map.on('pitchend', onEnd)
     const canvas = map.getCanvas()
     canvas.addEventListener('pointerdown', onStart)
@@ -1460,7 +1470,7 @@ const nextStep = useMemo(() => {
                   try { m.stop(); } catch { /* noop */ }
                   try { m.setPitch(0); } catch { /* noop */ }
                 } else {
-                  try { m.dragPan.disable(); } catch { /* noop */ }
+                  try { m.dragPan.enable(); } catch { /* noop */ }
                   try { m.touchPitch.disable(); } catch { /* noop */ }
                   try { m.touchZoomRotate.disableRotation(); } catch { /* noop */ }
                   followLockRef.current = true;
