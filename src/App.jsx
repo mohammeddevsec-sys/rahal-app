@@ -580,6 +580,8 @@ function App() {
         cameraOptions.center = [location.lng, location.lat]
         cameraOptions.bearing = h
       }
+      const padTop = Math.round((startMap.getContainer().clientHeight || 600) * 0.4)
+      try { startMap.setPadding({ top: padTop, bottom: 0, left: 0, right: 0 }) } catch { /* noop */ }
       startMap.stop()
       startMap.jumpTo(cameraOptions)
     }
@@ -602,6 +604,7 @@ function App() {
     stopSpeaking()
     const navReset = mapRef.current
     if (navReset) {
+      try { navReset.setPadding({ top: 0, bottom: 0, left: 0, right: 0 }) } catch { /* noop */ }
       try { navReset.easeTo({ pitch: 0, bearing: 0, duration: 600, essential: true }) } catch { /* noop */ }
     }
     const map = mapRef.current
