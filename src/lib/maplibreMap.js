@@ -48,16 +48,23 @@ function recolorLayers(baseLayers) {
           return Object.assign({}, l, { paint: p })
         }
       }
-      if (l.type === 'line' && id.indexOf('roads_') === 0 && id.indexOf('casing') === -1) {
-        var p2 = Object.assign({}, l.paint || {})
-        p2['line-color'] = '#ffffff'
-        delete p2['line-dasharray']
-        return Object.assign({}, l, { paint: p2 })
-      }
-      if (l.type === 'line' && id.indexOf('roads_') === 0 && id.indexOf('casing') !== -1) {
-        var p4 = Object.assign({}, l.paint || {})
-        delete p4['line-dasharray']
-        return Object.assign({}, l, { paint: p4 })
+      if (l.type === 'line' && id.indexOf('roads_') !== -1) {
+        var rp = Object.assign({}, l.paint || {})
+        var baseW = 1.0
+        if (id.indexOf('motorway') !== -1) baseW = 1.7
+        else if (id.indexOf('trunk') !== -1) baseW = 1.5
+        else if (id.indexOf('primary') !== -1) baseW = 1.25
+        else if (id.indexOf('secondary') !== -1) baseW = 1.0
+        else if (id.indexOf('tertiary') !== -1) baseW = 0.85
+        else if (id.indexOf('minor') !== -1 || id.indexOf('residential') !== -1) baseW = 0.7
+        else if (id.indexOf('service') !== -1 || id.indexOf('track') !== -1) baseW = 0.5
+        else if (id.indexOf('path') !== -1 || id.indexOf('footway') !== -1) baseW = 0.35
+        var isCasing = id.indexOf('casing') !== -1
+        if (isCasing) { rp['line-color'] = '#d8d8d8' } else { rp['line-color'] = '#ffffff' }
+        delete rp['line-dasharray']
+        var extra = isCasing ? 2 : 0
+        rp['line-width'] = ['interpolate', ['exponential', 1.4], ['zoom'], 10, Math.max(0.5, baseW * 0.5) + extra, 14, Math.max(1, baseW * 1.5) + extra, 17, baseW * 4 + extra, 19, baseW * 9 + extra, 20, baseW * 13 + extra]
+        return Object.assign({}, l, { paint: rp })
       }
       if (l.type === 'line' && id.indexOf('casing') !== -1) {
         var p3 = Object.assign({}, l.paint || {})
