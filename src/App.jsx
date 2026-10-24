@@ -556,7 +556,7 @@ function App() {
     if (startMap) {
       const cameraOptions = {
         zoom: 17.5,
-        pitch: 55,
+        pitch: 60,
         padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
         duration: 900,
         essential: true,
@@ -1306,7 +1306,7 @@ const nextStep = useMemo(() => {
               const dLng = (destinationRef.current.lng - location.lng) * Math.cos(location.lat * Math.PI / 180);
               if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
             }
-            m.easeTo({ pitch: 55, bearing: h, duration: 600, essential: true });
+            m.easeTo({ pitch: 60, bearing: h, duration: 600, essential: true });
           }}
         >
           <img src="/icons/recenter.png" alt="إعادة التوجيه" />
@@ -1483,7 +1483,7 @@ const nextStep = useMemo(() => {
                     if (typeof tgt.heading === 'number' && !isNaN(tgt.heading)) smc.heading = tgt.heading;
                   }
                   try { m.stop(); } catch { /* noop */ }
-                  try { m.setPitch(55); } catch { /* noop */ }
+                  try { m.setPitch(60); } catch { /* noop */ }
                 }
               }}
               aria-label={followLocked ? 'إلغاء التثبيت' : 'تثبيت الكاميرا خلف السهم'}
