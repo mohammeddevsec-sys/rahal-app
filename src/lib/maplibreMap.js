@@ -31,16 +31,16 @@ function recolorLayers(baseLayers) {
     try {
       var id = (l.id || '').toLowerCase()
       if (l.type === 'background') {
-        return Object.assign({}, l, { paint: { 'background-color': '#f5e8c8' } })
+        return Object.assign({}, l, { paint: { 'background-color': '#f2f2f2' } })
       }
       if (l.type === 'fill') {
         var nc = null
         if (id === 'earth') nc = '#f5e8c8'
-        else if (id === 'landcover') nc = '#eaddbc'
-        else if (id.indexOf('water') !== -1) nc = '#74c4ea'
-        else if (id === 'landuse_park' || id === 'landuse_urban_green' || id === 'landuse_zoo') nc = '#98d898'
-        else if (id === 'landuse_beach') nc = '#f5e0a0'
-        else if (id === 'buildings') nc = '#d8ccb8'
+        else if (id === 'landcover') nc = '#e8e8e8'
+        else if (id.indexOf('water') !== -1) nc = '#a8d8ea'
+        else if (id === 'landuse_park' || id === 'landuse_urban_green' || id === 'landuse_zoo') nc = '#c8e6c8'
+        else if (id === 'landuse_beach') nc = '#f0e8d0'
+        else if (id === 'buildings') nc = '#e8e4dc'
         if (nc) {
           var p = Object.assign({}, l.paint || {})
           p['fill-color'] = nc
@@ -61,7 +61,7 @@ function recolorLayers(baseLayers) {
       }
       if (l.type === 'line' && id.indexOf('casing') !== -1) {
         var p3 = Object.assign({}, l.paint || {})
-        p3['line-color'] = '#c8bca0'
+        p3['line-color'] = '#b8b8b8'
         return Object.assign({}, l, { paint: p3 })
       }
     } catch { /* noop */ }
