@@ -557,7 +557,6 @@ function App() {
       const cameraOptions = {
         zoom: 17.5,
         pitch: 60,
-        padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
         duration: 900,
         essential: true,
       }
@@ -584,6 +583,7 @@ function App() {
       try { startMap.setPadding({ top: padTop, bottom: 0, left: 0, right: 0 }) } catch { /* noop */ }
       startMap.stop()
       startMap.jumpTo(cameraOptions)
+      setTimeout(() => { try { console.log("[DIAG] zoom=", startMap.getZoom().toFixed(2), "pitch=", startMap.getPitch().toFixed(1), "padTop=", startMap.getPadding().top) } catch { /* noop */ } }, 100)
     }
   }, [routeInfo, location, applyRoute])
 
