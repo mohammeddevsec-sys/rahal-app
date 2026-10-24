@@ -108,7 +108,7 @@ export async function initMap(container) {
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,
     maxPitch: 85,
-    maxZoom: PMTILES_MAX_DATA_ZOOM + 4,
+    maxZoom: PMTILES_MAX_DATA_ZOOM + 6,
     minZoom: 3,
     attributionControl: { compact: true },
     antialias: true,

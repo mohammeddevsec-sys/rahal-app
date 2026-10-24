@@ -555,7 +555,7 @@ function App() {
     const startMap = mapRef.current
     if (startMap) {
       const cameraOptions = {
-        zoom: 17.5,
+        zoom: 19,
         pitch: 60,
         duration: 900,
         essential: true,
