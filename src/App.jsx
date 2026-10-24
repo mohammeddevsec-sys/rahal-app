@@ -398,7 +398,7 @@ function App() {
     arrivalSpokenRef.current = false
 
     const coords = route.geometry.coordinates
-    if (coords && coords.length > 0) {
+    if (coords && coords.length > 0 && !tripActiveRef.current && !followLockRef.current) {
       const lngs = coords.map((c) => c[0])
       const lats = coords.map((c) => c[1])
       const bounds = [
