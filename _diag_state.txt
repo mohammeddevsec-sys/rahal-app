@@ -1,0 +1,259 @@
+﻿# RAHAL - Project State
+
+Last update: 2026-10-07 01:00 (Baghdad)
+
+## Stack
+- Vite 8.3.3 + React 19.2.8
+- MapLibre GL JS 6.13.0 (replaced Leaflet)
+- @protomaps/basemaps 5.7.2
+- pmtiles 4.5.0 + pmtiles-offline 1.0.0 (not used, keep as dep)
+- vite-plugin-pwa 2.0.0
+
+## Working (verified)
+- Map: MapLibre + Protomaps style (light, lang=ar)
+- PMTiles: /maps/iraq.pmtiles (115.53 MB, maxzoom 13)
+- IndexedDB: full file cached (121,141,858 bytes)
+- Service Worker: precache 12 entries
+- GPS: real position + accuracy circle + status pill
+- Controls: + / - / recenter / "my location"
+- Search: Nominatim, restricted to Iraq, sorted by distance
+- Routing: OSRM demo server (router.project-osrm.org)
+- Route line: blue 6px with white 9px casing
+- Offline: works (map + GPS + IndexedDB)
+
+## Not built yet
+- Dynamic re-routing (route does not update when you move)
+- Tabs content (saved / places / more) - currently "coming soon"
+- Report buttons (accident / traffic / closure / hazard) - visual only
+- Home / Work / Nearby quick actions - visual only
+- Android packaging (Capacitor)
+- Backend for community reports
+- Turn-by-turn voice guidance
+
+## Known issues
+- OSRM uses demo server - NOT for production
+- Bundle: maplibre chunk 1.04 MB (code splitting done, but maplibre is big)
+- Some OSM names are English-only (e.g. "Hay Al-Jihad" instead of "Ø­ÙŠ Ø§Ù„Ø¬Ù‡Ø§Ø¯")
+- pmtiles-offline package present but unused
+
+## Files (key)
+- src/App.jsx (18342 B)
+- src/App.css (8693 B)
+- src/main.jsx (311 B)
+- src/index.css (267 B)
+- src/lib/maplibreMap.js (2967 B)
+- src/lib/offlinePMTiles.js (2959 B)
+- src/lib/nominatim.js (2432 B)
+- src/lib/routing.js (1448 B)
+- src/hooks/useUserLocation.js (1771 B)
+- src/lib/geolocation.js (2219 B)
+- vite.config.js
+- package.json
+
+## Next decision (open)
+Choose one when resuming:
+- A) Dynamic re-routing
+- B) Tabs content (saved / places / more)
+- C) Report buttons functionality
+- D) Home / Work / Nearby quick actions
+- E) Android packaging
+
+Recommended order: B -> D -> C -> A -> E
+
+## Commands to resume
+1. npm --prefix D:\RAHAL run preview   (in one PowerShell window)
+2. Open http://localhost:4173/
+3. If build needed: npm --prefix D:\RAHAL run build
+4. If lint needed: npm --prefix D:\RAHAL run lint
+
+## Notes
+- All file writes use: [System.IO.File]::WriteAllText(path, text, [System.Text.UTF8Encoding]::new($false))
+- Never use -replace with 3 args in PowerShell 5.1 (fails). Use .Replace() method only.
+- Arabic text: use unicode escapes \uXXXX inside JSX or build with [char] codes from PowerShell.
+- Do not paste JSX into PowerShell directly. Always write files via here-string @' ... '@
+
+## Next session priorities (user request 2026-10-07)
+1. Dynamic re-routing: recalc route when user moves off the path
+2. Voice guidance for navigation (Arabic)
+3. Complete UI sections content (saved / places / more)
+4. Show distance in km + remaining time (ETA) prominently
+
+Order agreed: as listed above, one by one.
+
+## Update 2026-10-07 (after second session)
+### Now working
+- Nominatim: single request, viewbox, sorted by distance
+- searchNearby: bounded radii (1Â°, 2Â°, 3.5Â°)
+- Arabic number-to-words: spokenDistancePhrase, spokenDurationPhrase
+- TTS voice: Arabic SA, cached
+- Trip start/stop: clears route + search + marker
+- Search history: last 10, with per-item delete and clear-all
+- Home/Work: set/get/clear, saved in localStorage
+- "Nearby" button: uses searchNearby
+- Tabs: Places (home/work), Settings (sections)
+
+### Not working yet
+- Traffic report buttons (accident/traffic/closure/hazard) - visual only
+- ETA banner is INSIDE map area (user wants it outside map)
+- Dynamic re-routing
+- Android packaging
+
+### Next session priorities
+1. Traffic report buttons functionality (local storage + display on map)
+2. Move ETA banner OUTSIDE the map area
+3. Improve search accuracy further
+4. Dynamic re-routing
+
+## Update 2026-10-07 - Map smoothness (started)
+### Last command sent (NOT executed yet)
+File: D:\RAHAL\src\lib\maplibreMap.js
+Change: add smoothness options to MapLibre Map constructor:
+- antialias: true
+- fadeDuration: 100
+- maxTileCacheSize: 512
+- maxTileCacheZoomLevels: 8
+- refreshExpiredTiles: false
+- minZoom: 3
+- touchZoomRotate, doubleClickZoom, keyboard: true
+
+The old block being replaced is the `new MapLibreMap({ container, style, center, zoom, maxZoom, attributionControl })` block.
+
+### Plan after this
+1. Replace flyTo with easeTo for short movements (cubic easing)
+2. Add `essential: true` to easeTo during trip tracking
+3. Build + Lint + visual test
+
+### Additional improvements queued
+- Prevent duplicate reports at same location (offset or skip)
+- React.lazy for maplibre chunk (bundle size)
+- Dynamic re-routing
+- Android packaging
+
+## Update 2026-10-07 (afternoon) - Reports Backend built
+### Working
+- Backend server (D:\RAHAL\server) using express + node:sqlite
+- Port 3001 running. Vite on 4173.
+- Endpoints: GET /api/health, GET/POST /api/reports, POST /api/reports/:id/confirm, POST /api/reports/:id/resolve, DELETE /api/reports/:id
+- Confirmation threshold = 3 (raises expires_at by 3 hours)
+- TTL default = 2 hours
+- Frontend: fetchActiveReports every 30s, markers on map, nearby alert card with 3 buttons
+
+### Issue observed (not diagnosed yet)
+- All reports ended up RESOLVED on the server (unexpected)
+- The 4th report (6021195b) was RESOLVED at 9 min age, conf=0
+- Did NOT yet confirm if user pressed "Ù„Ø§ØŒ Ø§Ù†ØªÙ‡Ù‰" (resolve) manually
+- If not pressed, there's a bug: something calls POST /resolve automatically
+
+### Next step when resuming
+1. Ask user: did you press "Ù„Ø§ØŒ Ø§Ù†ØªÙ‡Ù‰" button? (yes/no)
+2. If NO:
+   - Delete D:\RAHAL\server\data\rahal.db
+   - Restart server
+   - Create fresh report via PowerShell
+   - Wait 90 seconds without touching the browser
+   - Check server via API whether it became RESOLVED
+3. If YES: not a bug, behavior correct
+
+### Running processes
+- Window 1: npm --prefix D:\RAHAL\server start (port 3001)
+- Window 2: npm --prefix D:\RAHAL run preview (port 4173)
+
+### Files added this session
+- D:\RAHAL\server\package.json
+- D:\RAHAL\server\db.js
+- D:\RAHAL\server\server.js
+- D:\RAHAL\src\lib\reports.js (rewritten to use API)
+- D:\RAHAL\public\icons\*.svg (4 icons)
+- D:\RAHAL\eslint.config.js (excludes server/)
+
+## Update 2026-10-07 (evening) - TTS endpoint working
+### Fact: server /api/tts works with Rana
+- PowerShell test: OK, SIZE=21888 bytes with ar-IQ-RanaNeural
+- Problem was PowerShell encoding of Arabic text; solved via UTF-8 bytes + \uXXXX escapes
+
+### Pending: wire frontend to /api/tts
+- App.jsx still uses speakArabic() -> browser speechSynthesis -> Naayf male
+- Need: src/lib/tts.js that calls POST /api/tts, plays audio via new Audio()
+- Then modify speakArabic in App.jsx to use it
+- Fallback to speechSynthesis if endpoint fails
+
+### Test command to reproduce working server call
+$json = '{"text":"\u0627\u0646\u0639\u0637\u0641 \u064A\u0645\u064A\u0646\u0627\u064B \u0628\u0639\u062F \u0645\u0626\u0629 \u0645\u062A\u0631","voice":"ar-IQ-RanaNeural"}'
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+Invoke-WebRequest -Uri 'http://localhost:3001/api/tts' -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8' -OutFile 'D:\RAHAL\server\data\test-rana.mp3' -UseBasicParsing
+
+### Running processes
+- rahal-server on 3001 (PID may change)
+- vite preview on 4173
+
+## Update 2026-10-07 (late evening) - Report system finalized
+### Working
+- New "report" tab (separate screen like saved/places/more)
+- 6 report types: accident, traffic, closure, hazard, camera, checkpoint
+- Auto-placement at current location (Waze-style, no manual tap)
+- Server db.js REPORT_TYPES extended to accept all 6
+- New icons: camera.svg, checkpoint.svg
+
+### Server notes
+- Port 3001 running with PID may change; use taskkill /PID <pid> /F to stop
+- Stop-Process sometimes silently fails; taskkill is more reliable
+
+### Known issues
+- Overpass API sometimes returns 504 (external service, not our bug)
+- TTS endpoint works but frontend NOT wired yet to use it
+- Browser speechSynthesis still used for voice (Naayf male)
+
+### Next priorities
+1. Wire frontend to /api/tts (Rana Iraqi female voice)
+2. Android APK packaging (needs JDK 21 + Android Studio)
+3. Dynamic re-routing (built but not tested on real moving device)
+
+## Update 2026-10-07 (night) - Voice solved (Rana Iraqi female)
+### Working and confirmed
+- TTS endpoint /api/tts on server 3001, voice ar-IQ-RanaNeural (Iraqi female)
+- Frontend wired: speakArabic -> speakArabicViaServer -> fallback speechSynthesis
+- LRU cache 32 items inside src/lib/tts.js
+- Lock prevents overlapping voices (speakLock + cancelAllVoice)
+- stopTrip cancels both server audio and browser speechSynthesis
+- Voice now only female Rana, no male Naayf overlap
+
+### Server / client ports
+- 3001: rahal-server (Express + node:sqlite + edge-tts-universal 1.4.0)
+- 4173: vite preview
+
+### Reliable ways to stop stuck node
+- taskkill /PID <pid> /F   (Stop-Process sometimes silently fails)
+
+### Search is currently broken/slow
+- Nominatim returns failures; "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø¨Ø­Ø«" appears; no options shown
+- Suspected causes: 429 rate limit after heavy testing today, or 504 from Nominatim
+- Diagnose TOMORROW: open Console during search and capture the exact error
+
+### Tomorrow priorities
+1. Fix search (Nominatim / Overpass). Diagnose first via Console + Network
+2. Then continue with: Android APK (needs JDK 21 + Android Studio)
+3. Then: test dynamic re-routing on real device
+
+### Files changed tonight
+- src/lib/tts.js (new)
+- src/App.jsx (speakArabic rewritten, stopTrip updated, cache+lock)
+- server/server.js (TTS endpoint with retry logic, edge-tts-universal 1.4.0)
+- server/db.js (REPORT_TYPES now has 6 types: accident, traffic, closure, hazard, camera, checkpoint)
+- public/icons/camera.svg, checkpoint.svg (new)
+
+## Update 2026-10-08 - STOP POINT
+### Search currently broken
+- overpass-api.de returns 406 Not Acceptable
+- kumi.systems and private.coffee return 500
+- Proxy on server works but all mirrors fail
+- Next: read server log lines "overpass try" to see exact per-mirror error
+
+### All working
+- Map, GPS, routing, reports (6 types), Rana Iraqi female voice
+
+### Ports
+- 3001: rahal-server
+- 4173: vite preview
+
+### Stop command for server
+taskkill /PID <pid> /F

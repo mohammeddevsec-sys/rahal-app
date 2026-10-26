@@ -7,6 +7,7 @@ import { searchPlaces } from './lib/nominatim.js'
 import { loadStats, addPoints, getLevelName } from './lib/gamification.js'
 import { searchNearby, CATEGORIES } from './lib/overpass.js'
 import { getRoute, formatDistanceArabic, formatDurationArabic, distanceToRoute } from './lib/routing.js'
+import { matchPositionToRoute } from './lib/routeMatching.js'
 import { spokenDistancePhrase } from './lib/arabic.js'
 import { loadSearchHistory, addSearchHistory, removeSearchHistory, clearSearchHistory } from './lib/searchHistory.js'
 import { loadPlace, savePlace, clearPlace, HOME_KEY, WORK_KEY } from './lib/savedPlaces.js'
@@ -128,6 +129,7 @@ function speakArabic(text) {
 }
 
 function App() {
+  window.rahalCameraRig = window.rahalCameraRig || { mode: 'FOLLOW', lastValidHeading: 0 };
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const lastReportRef = useRef({ type: null, lat: null, lng: null, time: 0 })
@@ -143,6 +145,7 @@ function App() {
   const searchResultMarkersRef = useRef([])
   const dismissedReportIdsRef = useRef(new Set())
   const destinationRef = useRef(null)
+  const routeProgressRef = useRef(0)
   const offRouteSinceRef = useRef(0)
   const lastRerouteAtRef = useRef(0)
   const spokenStepsRef = useRef(new Set())
@@ -161,6 +164,8 @@ function App() {
   const [userStats, setUserStats] = useState(() => loadStats())
   const [showPointsPopup, setShowPointsPopup] = useState(false)
   const [nearbyReport, setNearbyReport] = useState(null)
+  const [activeAlert, setActiveAlert] = useState(null)
+  const triggeredAlertsRef = useRef(new Set());
   const [routeInfo, setRouteInfo] = useState(null)
   const [routeStatus, setRouteStatus] = useState('idle')
 
@@ -211,6 +216,13 @@ function App() {
 
         map.addSource(ROUTE_SOURCE, { type: 'geojson', data: emptyRoute() })
         map.addLayer({
+          id: 'route-glow',
+          type: 'line',
+          source: ROUTE_SOURCE,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#0b63ce', 'line-width': 18, 'line-opacity': 0.14, 'line-blur': 8 },
+        })
+        map.addLayer({
           id: ROUTE_LAYER_OUTLINE,
           type: 'line',
           source: ROUTE_SOURCE,
@@ -231,7 +243,7 @@ function App() {
           type: 'line',
           source: 'traffic-moderate',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#f59e0b', 'line-width': 6, 'line-opacity': 1 },
+          paint: { 'line-color': '#f59e0b', 'line-width': 7, 'line-opacity': 1 },
         })
         map.addSource('traffic-heavy', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
         map.addLayer({
@@ -239,12 +251,26 @@ function App() {
           type: 'line',
           source: 'traffic-heavy',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#dc2626', 'line-width': 6, 'line-opacity': 1 },
+          paint: { 'line-color': '#dc2626', 'line-width': 7, 'line-opacity': 1 },
         })
 
         const el = document.createElement('div')
         el.className = 'user-marker'
-        el.innerHTML = '<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><filter id="chevm" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/></filter></defs><path d="M24 5 L42 42 L24 33 L6 42 Z" fill="#1e88e5" stroke="#ffffff" strokeWidth="3" strokeLinejoin="round" filter="url(#chevm)"/></svg>'
+        el.innerHTML = `
+      <div class="rahal-car-3d">
+        <div class="rahal-car-halo"></div>
+        <svg viewBox="0 0 40 40" style="width: 44px; height: 44px; z-index: 10;">
+          <defs>
+            <linearGradient id="carCyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#38e1ff"/>
+              <stop offset="50%" stop-color="#00b4d8"/>
+              <stop offset="100%" stop-color="#0077b6"/>
+            </linearGradient>
+          </defs>
+          <path d="M 20 2 L 38 34 C 33 30, 25 28.5, 20 28.5 C 15 28.5, 7 30, 2 34 Z" fill="url(#carCyanGrad)" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    `
         localMarker = new Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport' })
           .setLngLat(DEFAULT_CENTER)
           .addTo(map)
@@ -282,13 +308,28 @@ function App() {
             return;
           }
 
-          markerTargetRef.current.lng = lng
-          markerTargetRef.current.lat = lat
+          let targetLng = lng
+          let targetLat = lat
+          let routeBearing = null
+          const routeCoords = routeInfo?.geometry?.coordinates
+          if (tripActive && routeCoords && routeCoords.length >= 2) {
+            const match = matchPositionToRoute([lng, lat], routeCoords, routeProgressRef.current, accuracy)
+            if (match) {
+              routeProgressRef.current = Math.max(routeProgressRef.current, match.segmentIndex)
+              targetLng = match.coordinate[0]
+              targetLat = match.coordinate[1]
+              routeBearing = match.bearing
+            }
+          }
+          markerTargetRef.current.lng = targetLng
+          markerTargetRef.current.lat = targetLat
           let effHeading = heading
           const spd = typeof location.speed === 'number' ? Math.abs(location.speed) : 0
           const previousHeading = markerTargetRef.current.heading
           if (typeof effHeading !== 'number' || !Number.isFinite(effHeading) || spd < 1.2) {
-            if (typeof previousHeading === 'number' && Number.isFinite(previousHeading)) {
+            if (typeof routeBearing === 'number' && Number.isFinite(routeBearing)) {
+              effHeading = routeBearing
+            } else if (typeof previousHeading === 'number' && Number.isFinite(previousHeading)) {
               effHeading = previousHeading
             } else {
               const dest = destinationRef.current
@@ -317,7 +358,7 @@ function App() {
       map.flyTo({ center: [lng, lat], zoom: USER_ZOOM, animate: true })
       centeredRef.current = true
     }
-  }, [location, mapReady])
+  }, [location, mapReady, routeInfo, tripActive])
 
   useEffect(() => {
     if (activeTab !== 'home' || !mapRef.current) return
@@ -381,6 +422,7 @@ function App() {
   const applyRoute = useCallback((route) => {
     const map = mapRef.current
     if (!map || !route) return
+    routeProgressRef.current = 0
     const src = map.getSource(ROUTE_SOURCE)
     if (src) {
       src.setData({
@@ -555,8 +597,9 @@ function App() {
     const startMap = mapRef.current
     if (startMap) {
       const cameraOptions = {
-        zoom: 19,
+        zoom: 17.5,
         pitch: 60,
+        padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
         duration: 900,
         essential: true,
       }
@@ -579,13 +622,29 @@ function App() {
         cameraOptions.center = [location.lng, location.lat]
         cameraOptions.bearing = h
       }
-      const padTop = Math.round((startMap.getContainer().clientHeight || 600) * 0.4)
-      try { startMap.setPadding({ top: padTop, bottom: 0, left: 0, right: 0 }) } catch { /* noop */ }
       startMap.stop()
       startMap.jumpTo(cameraOptions)
-      setTimeout(() => { try { console.log("[DIAG] zoom=", startMap.getZoom().toFixed(2), "pitch=", startMap.getPitch().toFixed(1), "padTop=", startMap.getPadding().top) } catch { /* noop */ } }, 100)
     }
   }, [routeInfo, location, applyRoute])
+
+  useEffect(() => {
+    if (!tripActive || !location || !mapRef.current) return;
+    // إجبار الكاميرا على العودة لموقعك عند بدء الرحلة
+    const map = mapRef.current;
+    if (window.rahalCameraRig.mode === 'FOLLOW') {
+        map.easeTo({
+            center: [location.lng, location.lat],
+            zoom: 17.5,
+            pitch: 55,
+            padding: { top: Math.round((map.getContainer().clientHeight || 600) * 0.40), bottom: 0, left: 0, right: 0 },
+            duration: 1000,
+            essential: true
+        });
+        window.rahalCameraRig.mode = 'RECENTER'; // منع التكرار
+        setTimeout(() => { window.rahalCameraRig.mode = 'FOLLOW'; }, 1200);
+    }
+  }, [tripActive, location]);
+
 
   
   const stopTrip = useCallback(() => {
@@ -791,6 +850,12 @@ function App() {
       onNearbySearch: handlePickCategory,
       onFreeSearch: handleVoiceFreeSearch,
       onStateChange: setIsMicListening,
+      getRouteStats: () => {
+        if (nextStepRef.current) {
+          return { distance: nextStepRef.current.remainingDistance, duration: nextStepRef.current.remainingDuration };
+        }
+        return null;
+      },
     })
   }, [routeInfo, startTrip, stopTrip, tripActive, handlePickCategory, handleVoiceFreeSearch])
 
@@ -1066,36 +1131,13 @@ function App() {
       { lat: location.lat, lng: location.lng },
       { lat: dest.lat, lng: dest.lng },
     ).then((route) => {
-      if (route) applyRoute(route)
+      if (!route) return
+      speakArabic('\u062A\u0645 \u0625\u064A\u062C\u0627\u062F \u0645\u0633\u0627\u0631 \u062C\u062F\u064A\u062F')
+      applyRoute(route)
     }).catch((err) => {
       console.error('reroute failed:', err)
     })
   }, [location, routeInfo, routeStatus, applyRoute])
-  useEffect(() => {
-    if (!tripActive || !routeInfo || !routeInfo.geometry || !location) return
-    const coords = routeInfo.geometry.coordinates
-    if (!coords || coords.length === 0) return
-    const startPt = coords[0]
-    const startLat = startPt[1]
-    const startLng = startPt[0]
-    const dLat = (location.lat - startLat) * 111320
-    const dLng = (location.lng - startLng) * 111320 * Math.cos((startLat * Math.PI) / 180)
-    const drift = Math.sqrt(dLat * dLat + dLng * dLng)
-    if (drift < 15) return
-    const now = Date.now()
-    if (now - lastRerouteAtRef.current < 5000) return
-    const dest = destinationRef.current
-    if (!dest) return
-    lastRerouteAtRef.current = now
-    getRoute(
-      { lat: location.lat, lng: location.lng },
-      { lat: dest.lat, lng: dest.lng },
-    ).then((route) => {
-      if (route) applyRoute(route)
-    }).catch((err) => {
-      console.error('drift reroute failed:', err)
-    })
-  }, [tripActive, routeInfo, location, applyRoute])
 
 
   const statusLabel = (() => {
@@ -1195,7 +1237,11 @@ useEffect(() => {
   rafId = requestAnimationFrame(step)
   return () => cancelAnimationFrame(rafId)
 }, [mapReady])
-const nextStep = useMemo(() => {
+const warnedStepsRef = useRef(new Set());
+  const warnedReportsRef = useRef(new Set());
+  const lastSpeedWarningRef = useRef(0);
+
+  const nextStep = useMemo(() => {
     if (!location || !routeInfo || !routeInfo.steps) return null
     const steps = routeInfo.steps
     if (steps.length === 0) return null
@@ -1229,6 +1275,98 @@ const nextStep = useMemo(() => {
       isArrival: step.type === 'arrive',
     }
   }, [location, routeInfo])
+
+  // إعادة تصفير التنبيهات عند بدء رحلة جديدة
+  useEffect(() => {
+    if (tripActive) {
+      warnedStepsRef.current.clear();
+      warnedReportsRef.current.clear();
+      lastSpeedWarningRef.current = 0;
+    }
+  }, [tripActive])
+
+  // 0. النافذة العائمة (Waze Popup)
+  useEffect(() => {
+    if (!tripActive) { setActiveAlert(null); return; }
+    
+    // فحص العوائق
+    if (location && reports.length > 0) {
+      for (const r of reports) {
+        if (r.resolvedAt) continue;
+        const d = metersBetween(location, r);
+        if (d < 250 && d > 30) {
+          if (!triggeredAlertsRef.current.has(r.id)) {
+            triggeredAlertsRef.current.add(r.id);
+            const t = getReportType(r.type);
+            setActiveAlert({ title: t.label, subtitle: 'انتبه أمامك ' + t.label, distance: Math.round(d/10)*10 });
+          }
+          break;
+        }
+      }
+    }
+    
+    // فحص الانعطافات (تظهر النافذة عندما تكون المسافة 300 متر)
+    if (nextStep && nextStep.distanceToStep && nextStep.distanceToStep < 300) {
+       const stepId = 'step_ui_' + nextStep.index;
+       if (!triggeredAlertsRef.current.has(stepId)) {
+           triggeredAlertsRef.current.add(stepId);
+           setActiveAlert({ title: 'توجيه', subtitle: nextStep.instruction, distance: Math.round(nextStep.distanceToStep) });
+       }
+    }
+  }, [location, reports, nextStep, tripActive]);
+
+  // 1. تنبيهات الانعطاف
+  useEffect(() => {
+    if (!tripActive || !nextStep || nextStep.isArrival) return
+    const dist = nextStep.distanceToStep
+    if (dist > 0) {
+      const stepId = 'step_' + nextStep.index
+      let text = ''
+      if (dist <= 50 && !warnedStepsRef.current.has(stepId + '_50')) {
+        warnedStepsRef.current.add(stepId + '_50')
+        text = 'الآن، ' + nextStep.instruction
+      } else if (dist <= 300 && !warnedStepsRef.current.has(stepId + '_300')) {
+        warnedStepsRef.current.add(stepId + '_300')
+        text = 'بعد 300 متر، ' + nextStep.instruction
+      }
+      if (text) speakArabic(text)
+    }
+  }, [nextStep, tripActive])
+
+  // 2. تنبيهات العوائق (مطبات، كاميرات، إلخ)
+  useEffect(() => {
+    if (!tripActive || !location) return
+    for (const r of reports) {
+      if (r.resolvedAt || (r.expiresAt && r.expiresAt < Date.now())) continue
+      const d = metersBetween(location, r)
+      if (d < 250 && d > 50) {
+        const repId = 'rep_' + r.id
+        if (!warnedReportsRef.current.has(repId)) {
+          warnedReportsRef.current.add(repId)
+          const t = getReportType(r.type)
+          if (t) speakArabic('انتبه، أمامك ' + t.label + ' بعد ' + Math.round(d/50)*50 + ' متر')
+          break
+        }
+      }
+    }
+  }, [location, reports, tripActive])
+
+  // 3. تنبيهات السرعة
+  useEffect(() => {
+    if (!tripActive || !location || !location.speed) return
+    const speedKmh = location.speed * 3.6
+    const limit = 80 // يمكن تعديلها حسب المنطقة
+    if (speedKmh > limit + 5) {
+      const now = Date.now()
+      if (now - lastSpeedWarningRef.current > 20000) {
+        lastSpeedWarningRef.current = now
+        speakArabic('تجاوزت السرعة المقررة ' + limit + ' كم/س، خفف السرعة')
+      }
+    }
+  }, [location, tripActive])
+
+  const nextStepRef = useRef(null);
+  useEffect(() => { nextStepRef.current = nextStep; }, [nextStep]);
 
   useEffect(() => {
     const map = mapRef.current
@@ -1278,6 +1416,7 @@ const nextStep = useMemo(() => {
       const t = new Date(Date.now() + nextStep.remainingDuration * 1000)
       setArrivalTimeText(t.toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', hour12: true }))
     }
+    compute() // تشغيل فوري عند بدء الرحلة
     const id = setInterval(compute, 30000)
     return () => clearInterval(id)
   }, [tripActive, nextStep])
@@ -1427,9 +1566,80 @@ const nextStep = useMemo(() => {
         </section>
 
         <section className="map-area" aria-label={UI_TEXT.mapLabel}>
-          <div className={statusClass} role="status">{statusLabel}</div>
+          {!tripActive && <div className={statusClass} role="status">{statusLabel}</div>}
 
-          <div ref={containerRef} className="rahal-map" />
+          
+        <div ref={containerRef} className="rahal-map" />
+        
+        {/* ===== WAZE ALERT POPUP ===== */}
+        {activeAlert && (
+          <div className="waze-alert-popup">
+            <div className="waze-alert-box">
+              <div className="waze-alert-icon-wrapper">
+                <div className="waze-alert-pulse"></div>
+                <div style={{ width: '44px', height: '44px', background: '#06b6d4', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                  <svg viewBox="0 0 24 24" fill="none" style={{ width: '24px', height: '24px', stroke: '#fff', strokeWidth: 2 }}>
+                    <polygon points="12,3 22,20 2,20" />
+                    <line x1="12" y1="10" x2="12" y2="16" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                  </svg>
+                </div>
+              </div>
+              <div className="waze-alert-content">
+                <div className="waze-alert-title">
+                  {activeAlert.title}
+                  <span className="waze-alert-distance">بعد {activeAlert.distance} م</span>
+                </div>
+                <div className="waze-alert-subtitle">{activeAlert.subtitle}</div>
+              </div>
+              <button className="waze-alert-close" onClick={() => setActiveAlert(null)}>✕</button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== WAZE HUD OVERLAY ===== */}
+        {tripActive && (
+          <div className="waze-hud-container">
+            {/* الشريط الأسود العلوي */}
+            <div className="waze-top-bar">
+              <div className="waze-turn-info">
+                <div style={{ fontSize: '32px' }}>↰</div>
+                <div>
+                  <div className="waze-distance">
+                    {nextStep ? formatDistanceArabic(nextStep.distanceToStep) : '0 م'}
+                  </div>
+                  <div className="waze-instruction">
+                    {nextStep ? nextStep.instruction : 'جاري التحميل...'}
+                  </div>
+                </div>
+              </div>
+              <button className="waze-exit-btn" onClick={stopTrip}>خروج</button>
+            </div>
+
+            {/* المنطقة السفلية */}
+            <div className="waze-bottom-area">
+              <div className="waze-floating-actions">
+                <div className="waze-speedometer">
+                  <span className="waze-speedometer-val">{Math.round((location?.speed || 0) * 3.6)}</span>
+                  <span className="waze-speedometer-unit">كم/س</span>
+                </div>
+                <button className="waze-report-btn" onClick={() => setActiveTab('report')}>
+                  ⚠️
+                </button>
+              </div>
+              
+              <div className="waze-eta-sheet">
+                <div style={{ textAlign: 'center' }}>
+                  <div id="waze-eta-time" className="waze-eta-time">{arrivalTimeText}</div>
+                  <div id="waze-eta-details" className="waze-eta-details">
+                    {nextStep ? formatDistanceArabic(nextStep.remainingDistance) : ''} · {nextStep ? formatDurationArabic(nextStep.remainingDuration) : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
           {mapError && <div className="map-error">{mapError}</div>}
           <div className="map-controls">
             <button type="button" aria-label={UI_TEXT.zoomIn} onClick={zoomIn}>+</button>
@@ -1520,9 +1730,9 @@ const nextStep = useMemo(() => {
             <div className="nav-waze-handle"></div>
             {arrivalTimeText && arrivalTimeText !== '--:--' && (<div className="nav-waze-time">{arrivalTimeText}</div>)}
             <div className="nav-waze-meta">
-              <span>{nextStep ? formatDistanceArabic(nextStep.remainingDistance) : 'â€”'}</span>
+              <span>{nextStep ? formatDistanceArabic(nextStep.remainingDistance) : '\u2014'}</span>
               
-              <span>{nextStep ? formatDurationArabic(nextStep.remainingDuration) : 'â€”'}</span>
+              <span>{nextStep ? formatDurationArabic(nextStep.remainingDuration) : '\u2014'}</span>
             </div>
           </div>
         )}

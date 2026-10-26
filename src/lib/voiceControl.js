@@ -2,16 +2,18 @@
 // Web Speech API + Rana TTS + reports backend
 
 import { speakArabicViaServer, stopSpeaking } from './tts.js'
+import { formatDistanceArabic, formatDurationArabic } from './routing.js'
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition
 let recognition = null
 let isListening = false
+let isWelcomePlaying = false
 let micWindowTimer = null
 let silenceTimer = null
 let accumText = ''
 let lastCommandAt = 0
 
-const MIC_WINDOW_MS = 4500
+const MIC_WINDOW_MS = 4000
 const SILENCE_MS = 2500
 const COOLDOWN_MS = 2500
 
@@ -46,7 +48,7 @@ function safeStop() {
   try { recognition.stop() } catch { /* not started */ }
 }
 
-export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, onStateChange }) {
+export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, onStateChange, getRouteStats }) {
   if (!SR) {
     say('\u0645\u062D\u0631\u0643 \u0627\u0644\u0623\u0648\u0627\u0645\u0631 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u063A\u064A\u0631 \u0645\u062F\u0639\u0648\u0645')
     return
@@ -73,20 +75,36 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
   // onStateChange(true) moved to onstart
 
   stopSpeaking()
+  isWelcomePlaying = true
+  // المايك مغلق تماماً هنا
+  
   say('\u0623\u0647\u0644\u0627 \u0628\u0643').then(() => {
     if (!isListening) return
+    
     safeStart()
+    accumText = ''
+    
+    micWindowTimer = setTimeout(() => {
+      console.log('MIC_WINDOW_CLOSED')
+      try {
+        if (accumText.trim()) {
+          const speechText = normalizeAr(accumText.trim().toLowerCase())
+          accumText = ''
+          console.log('VOICE_FINAL_FORCED:', speechText)
+          executeVoiceCommand(speechText, { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, getRouteStats })
+        }
+      } catch (e) {
+        console.error('VOICE_CMD_ERR:', e)
+      } finally {
+        // هذه الكتلة تضمن إغلاق المايك دائماً حتى لو حدث خطأ
+        clearTimers()
+        safeStop()
+        isListening = false
+        if (onStateChange) onStateChange(false)
+      }
+    }, 4000)
   })
 
-  // Global mic window
-  micWindowTimer = setTimeout(() => {
-    console.log('MIC_WINDOW_CLOSED')
-    accumText = '';
-    clearTimers()
-    safeStop()
-    isListening = false
-    if (onStateChange) onStateChange(false)
-  }, MIC_WINDOW_MS)
 
   // Results handler
   recognition.onstart = function () {
@@ -95,6 +113,7 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
   }
 
   recognition.onresult = function (event) {
+    if (isWelcomePlaying) return;
     console.log('RAW_MIC_INPUT:', event.results[event.results.length - 1][0].transcript);
     // Get latest final/partial text
     let latest = ''
@@ -121,7 +140,7 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
       }
       lastCommandAt = now
       console.log('VOICE_FINAL:', speechText)
-      executeVoiceCommand(speechText, { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch }); clearTimers(); safeStop(); isListening = false; if (onStateChange) onStateChange(false);
+      executeVoiceCommand(speechText, { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, getRouteStats }); clearTimers(); safeStop(); isListening = false; if (onStateChange) onStateChange(false);
     }, SILENCE_MS)
   }
 
@@ -142,9 +161,47 @@ export function toggleVoiceControl({ getMap, setActiveTab, submitReport, onStart
 }
 
 async function executeVoiceCommand(text, ctx) {
-  const { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch } = ctx
+  console.log('DEBUG_EXEC:', JSON.stringify(text), '| tripActive:', ctx?.tripActive)
+  const { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, getRouteStats } = ctx || {}
+
+  // ===== REMAINING ROUTE =====
+  if (text.includes('تبقي') || text.includes('باقي') || text.includes('الوصول') || text.includes('نوصل') || text.includes('بقي')) {
+    if (!tripActive) {
+      say('لا توجد رحلة نشطة حالياً')
+      return
+    }
+    const timeEl = document.getElementById('waze-eta-time')
+    const detailsEl = document.getElementById('waze-eta-details')
+    if (timeEl && detailsEl && timeEl.innerText && detailsEl.innerText && !timeEl.innerText.includes('--')) {
+      say('وقت الوصول ' + timeEl.innerText + '، ' + detailsEl.innerText)
+    } else {
+      const stats = typeof getRouteStats === 'function' ? getRouteStats() : null
+      if (stats && stats.distance !== undefined && stats.duration !== undefined) {
+        say('بقي ' + formatDistanceArabic(stats.distance) + '، ووقت الوصول ' + formatDurationArabic(stats.duration))
+      } else {
+        say('جاري حساب الوقت المتبقي')
+      }
+    }
+    return
+  }
   console.log('DEBUG_EXEC:', JSON.stringify(text), '| tripActive:', tripActive);
   const map = getMap ? getMap() : null
+
+
+  // ===== REMAINING ROUTE =====
+  if (text.includes('كم تبقى') || text.includes('كم باقي') || text.includes('الوصول') || text.includes('متى نوصل') || text.includes('كم بقي')) {
+    if (!tripActive) {
+      say('لا توجد رحلة نشطة حالياً');
+      return;
+    }
+    const stats = typeof getRouteStats === 'function' ? getRouteStats() : null;
+    if (stats && stats.distance !== undefined && stats.duration !== undefined) {
+      say('بقي ' + formatDistanceArabic(stats.distance) + '، ووقت الوصول ' + formatDurationArabic(stats.duration));
+    } else {
+      say('جاري حساب الوقت المتبقي');
+    }
+    return;
+  }
 
   // ===== CANCEL TRIP (Smart) =====
   const cancelRegex = /\u0644\u063A|\u0627\u0644\u063A|\u0648\u0642\u0641|\u0648\u0643\u0641|\u0627\u0646\u0647\u064A|\u0627\u0646\u0647\u0627\u0621|\u062E\u0644\u0627\u0635|\u062E\u0644\u0635|\u0643\u0646\u0633\u0644|\u0643\u0627\u0646\u0633\u0644/;
