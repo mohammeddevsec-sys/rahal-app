@@ -121,3 +121,17 @@ export async function searchNearby(query, options = {}) {
   }
   return []
 }
+export async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ar`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const addr = data.address || {};
+    return addr.suburb || addr.neighbourhood || addr.city_district || addr.city || addr.town || data.display_name || '';
+  } catch (e) {
+    console.warn('Reverse geocode failed:', e);
+    return '';
+  }
+}
