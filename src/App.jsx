@@ -1298,7 +1298,13 @@ const warnedStepsRef = useRef(new Set());
           if (!triggeredAlertsRef.current.has(r.id)) {
             triggeredAlertsRef.current.add(r.id);
             const t = getReportType(r.type);
-            setActiveAlert({ title: t.label, subtitle: 'انتبه أمامك ' + t.label, distance: Math.round(d/10)*10 });
+            const isCamera = r.type === 'camera' || r.type === 'checkpoint';
+            setActiveAlert({ 
+              title: t.label, 
+              subtitle: isCamera ? 'كاميرا مراقبة سرعة' : 'انتبه أمامك ' + t.label, 
+              distance: Math.round(d/10)*10,
+              isCamera
+            });
           }
           break;
         }
@@ -1574,16 +1580,39 @@ const warnedStepsRef = useRef(new Set());
         {/* ===== WAZE ALERT POPUP ===== */}
         {activeAlert && (
           <div className="waze-alert-popup">
-            <div className="waze-alert-box">
+            <div className={`waze-alert-box ${activeAlert.isCamera ? 'radar-mode' : ''}`}>
               <div className="waze-alert-icon-wrapper">
                 <div className="waze-alert-pulse"></div>
-                <div style={{ width: '44px', height: '44px', background: '#06b6d4', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                  <svg viewBox="0 0 24 24" fill="none" style={{ width: '24px', height: '24px', stroke: '#fff', strokeWidth: 2 }}>
-                    <polygon points="12,3 22,20 2,20" />
-                    <line x1="12" y1="10" x2="12" y2="16" />
-                    <line x1="9" y1="13" x2="15" y2="13" />
-                  </svg>
-                </div>
+                {activeAlert.isCamera ? (
+                  <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
+                    <span className="absolute inset-0 rounded-2xl border-2 border-cyan-400/80 radar-pulse-ring-1 pointer-events-none" />
+                    <span className="absolute inset-0 rounded-2xl border border-cyan-300/60 radar-pulse-ring-2 pointer-events-none" />
+                    <span className="absolute inset-0 rounded-2xl border border-cyan-500/40 radar-pulse-ring-3 pointer-events-none" />
+                    <div className="relative w-13 h-13 rounded-2xl overflow-hidden bg-gradient-to-br from-cyan-950 via-slate-900 to-slate-950 border border-cyan-400/90 shadow-[inset_0_0_12px_rgba(6,182,212,0.4)] flex items-center justify-center">
+                      <div className="absolute inset-[-40%] radar-sweep-beam pointer-events-none opacity-80" style={{ background: 'conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(34, 211, 238, 0.25) 320deg, rgba(34, 211, 238, 0.9) 360deg)' }} />
+                      <div className="absolute inset-1 rounded-xl border border-cyan-400/25 pointer-events-none" />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+                        <div className="w-full h-px bg-cyan-400" />
+                        <div className="h-full w-px bg-cyan-400 absolute" />
+                      </div>
+                      <div className="relative z-10 flex flex-col items-center justify-center">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.9)] stroke-white stroke-[1.8]">
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" fill="rgba(6,182,212,0.3)" />
+                          <circle cx="12" cy="13" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span className="absolute top-[9px] w-2 h-2 rounded-full bg-cyan-300 radar-lens-flash shadow-[0_0_10px_#22d3ee]" />
+                      </div>
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 z-20 w-5 h-5 rounded-full bg-white border-2 border-red-600 flex items-center justify-center shadow-md">
+                      <span className="text-[9px] font-black font-mono text-black leading-none">50</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative w-13 h-13 rounded-2xl flex items-center justify-center text-2xl shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 border border-amber-300/80 text-white shrink-0">
+                    <span className="absolute inset-0 rounded-2xl border-2 border-amber-400/70 radar-pulse-ring-1 pointer-events-none" />
+                    <span className="relative z-10 drop-shadow-md">⚠️</span>
+                  </div>
+                )}
               </div>
               <div className="waze-alert-content">
                 <div className="waze-alert-title">

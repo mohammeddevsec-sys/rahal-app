@@ -2993,3 +2993,35 @@ button { cursor: pointer; }
   40% { opacity: 0.65; }
   100% { transform: scale(2.2); opacity: 0; }
 }
+
+/* ===== WAZE RADAR PULSE ANIMATIONS ===== */
+@keyframes radarSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.radar-sweep-beam {
+  animation: radarSweep 2.2s linear infinite;
+  transform-origin: center center;
+}
+@keyframes radarPulseWave {
+  0% { transform: scale(0.85); opacity: 0.95; }
+  40% { opacity: 0.65; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.radar-pulse-ring-1 { animation: radarPulseWave 2.4s cubic-bezier(0.1, 0.7, 0.3, 1) infinite; }
+.radar-pulse-ring-2 { animation: radarPulseWave 2.4s cubic-bezier(0.1, 0.7, 0.3, 1) 0.8s infinite; }
+.radar-pulse-ring-3 { animation: radarPulseWave 2.4s cubic-bezier(0.1, 0.7, 0.3, 1) 1.6s infinite; }
+@keyframes radarLensFlash {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 16px rgba(34, 211, 238, 0.9); }
+}
+.radar-lens-flash { animation: radarLensFlash 1.2s ease-in-out infinite alternate; }
+
+/* تصميم نافذة التنبيه */
+.waze-alert-box.radar-mode {
+  background: rgba(15, 23, 42, 0.98);
+  border: 2px solid #22d3ee;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.95), 0 0 30px rgba(6,182,212,0.5);
+}
+.waze-alert-box.radar-mode .waze-alert-title { color: #cffafe; }
+.waze-alert-box.radar-mode .waze-alert-distance { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border-color: rgba(34, 211, 238, 0.5); }
