@@ -581,6 +581,16 @@ function App() {
       try { navControlMap.touchZoomRotate.disableRotation() } catch { /* noop */ }
     }
     setTripActive(true)
+    
+    // إضافة الهامش السفلي والميلان لدفع السهم للأسفل
+    const startMapNav = mapRef.current;
+    if (startMapNav) {
+      startMapNav.easeTo({
+        padding: { top: 0, bottom: Math.round(window.innerHeight * 0.35), left: 0, right: 0 },
+        pitch: 55,
+        duration: 1000
+      });
+    }
     speakArabic(UI_TEXT.tripStarted + '\u060C \u0642\u064F\u062F \u0628\u062D\u0630\u0631')
     typingWarnedRef.current = false
     spokenStepsRef.current = new Set()
@@ -661,6 +671,15 @@ function App() {
     };
     setTripActive(false)
     stopSpeaking()
+    
+    const stopMap = mapRef.current;
+    if (stopMap) {
+      stopMap.easeTo({
+        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+        pitch: 0,
+        duration: 800
+      });
+    }
     const navReset = mapRef.current
     if (navReset) {
       try { navReset.setPadding({ top: 0, bottom: 0, left: 0, right: 0 }) } catch { /* noop */ }
@@ -1230,6 +1249,9 @@ useEffect(() => {
       if (cameraMap && tripActiveRef.current && followLockRef.current && !isDraggingRef.current) {
         cameraMap.setCenter([sm.lng, sm.lat])
         cameraMap.setBearing(sm.heading)
+        if (Math.abs(cameraMap.getPitch() - 55) > 1) {
+          cameraMap.setPitch(55)
+        }
       }
     }
     rafId = requestAnimationFrame(step)
@@ -1316,7 +1338,11 @@ const warnedStepsRef = useRef(new Set());
        const stepId = 'step_ui_' + nextStep.index;
        if (!triggeredAlertsRef.current.has(stepId)) {
            triggeredAlertsRef.current.add(stepId);
-           setActiveAlert({ title: 'توجيه', subtitle: nextStep.instruction, distance: Math.round(nextStep.distanceToStep) });
+           let dir = 'straight';
+           const instr = nextStep.instruction || '';
+           if (instr.includes('يمين')) dir = 'right';
+           else if (instr.includes('يسار')) dir = 'left';
+           setActiveAlert({ title: 'توجيه', subtitle: nextStep.instruction, distance: Math.round(nextStep.distanceToStep), direction: dir });
        }
     }
   }, [location, reports, nextStep, tripActive]);
@@ -1608,9 +1634,28 @@ const warnedStepsRef = useRef(new Set());
                     </div>
                   </div>
                 ) : (
-                  <div className="relative w-13 h-13 rounded-2xl flex items-center justify-center text-2xl shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 border border-amber-300/80 text-white shrink-0">
+                  <div className="relative w-13 h-13 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 border border-amber-300/80 text-white shrink-0">
                     <span className="absolute inset-0 rounded-2xl border-2 border-amber-400/70 radar-pulse-ring-1 pointer-events-none" />
-                    <span className="relative z-10 drop-shadow-md">⚠️</span>
+                    <div className="relative z-10 flex items-center justify-center w-full h-full">
+                      {activeAlert.direction === 'left' && (
+                        <svg viewBox="0 0 36 36" fill="none" className="w-8 h-8 drop-shadow-md">
+                          <path d="M 28 32 L 28 16 C 28 10, 24 6, 17 6 L 10 6" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" />
+                          <polyline points="14 1 8 6 14 11" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      {activeAlert.direction === 'right' && (
+                        <svg viewBox="0 0 36 36" fill="none" className="w-8 h-8 drop-shadow-md">
+                          <path d="M 8 32 L 8 16 C 8 10, 12 6, 19 6 L 26 6" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" />
+                          <polyline points="22 1 28 6 22 11" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      {(!activeAlert.direction || activeAlert.direction === 'straight') && (
+                        <svg viewBox="0 0 36 36" fill="none" className="w-8 h-8 drop-shadow-md">
+                          <path d="M 18 32 L 18 10" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" />
+                          <polyline points="12 16 18 10 24 16" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1652,8 +1697,8 @@ const warnedStepsRef = useRef(new Set());
                   <span className="waze-speedometer-val">{Math.round((location?.speed || 0) * 3.6)}</span>
                   <span className="waze-speedometer-unit">كم/س</span>
                 </div>
-                <button className="waze-report-btn" onClick={() => setActiveTab('report')}>
-                  ⚠️
+                <button className="waze-report-btn" onClick={() => setActiveTab('report')} title="تسجيل بلاغ ملاحي حي">
+                  <img src="/report-icon.webp" alt="أيقونة بلاغات رحال" />
                 </button>
               </div>
               
