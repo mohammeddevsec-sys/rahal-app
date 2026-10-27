@@ -607,7 +607,7 @@ function App() {
 
   const zoomIn = useCallback(() => {
     const m = mapRef.current
-    if (m) m.setZoom(Math.min(m.getZoom() + 1.5, 22))
+    if (m) m.setZoom(Math.min(m.getZoom() + 4.5, 22))
   }, [])
 
   const zoomOut = useCallback(() => {
@@ -1302,6 +1302,13 @@ useEffect(() => {
     const sm = markerSmoothRef.current
     if (m && typeof tgt.lng === 'number' && typeof tgt.lat === 'number' && !isNaN(tgt.lng) && !isNaN(tgt.lat)) {
       if (sm.lng === null) { sm.lng = tgt.lng; sm.lat = tgt.lat; sm.heading = tgt.heading || 0 }
+      // توفير المعالج: تخطي الإطار إذا لم تكن هناك حركة
+      const dLng = tgt.lng - sm.lng
+      const dLat = tgt.lat - sm.lat
+      if (Math.abs(dLng) < 1e-7 && Math.abs(dLat) < 1e-7) {
+        rafId = requestAnimationFrame(step)
+        return
+      }
       const positionK = 0.18
       const headingK = 0.15
       sm.lng += (tgt.lng - sm.lng) * positionK
