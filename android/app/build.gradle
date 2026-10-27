@@ -57,3 +57,12 @@ try {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
 
+
+// === FORCE DOWNGRADE TO FIX AAR METADATA ===
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.activity:activity:1.9.3'
+        force 'androidx.core:core-ktx:1.13.1'
+        force 'androidx.core:core:1.13.1'
+    }
+}

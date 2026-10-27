@@ -1,4 +1,4 @@
-const TTS_API = 'http://localhost:3001/api/tts'
+﻿const TTS_API = 'http://192.168.0.106:3001/api/tts'
 const RANA_VOICE = 'ar-IQ-RanaNeural'
 const CACHE_LIMIT = 32
 const IDB_NAME = 'rahal-tts'
@@ -86,7 +86,7 @@ function memSet(key, blobUrl) {
 async function fetchAudioBlob(text, voice) {
   const res = await fetch(TTS_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'bypass-tunnel-reminder': 'true' },
     body: JSON.stringify({ text, voice }),
   })
   if (!res.ok) return null

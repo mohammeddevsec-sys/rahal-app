@@ -1,4 +1,5 @@
-﻿import { Map as MapLibreMap, Marker, addProtocol, setWorkerUrl } from 'maplibre-gl'
+﻿import { Capacitor } from '@capacitor/core';
+import { Map as MapLibreMap, Marker, addProtocol, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { Protocol, PMTiles } from 'pmtiles'
 import { layers, namedFlavor } from '@protomaps/basemaps'
@@ -94,7 +95,7 @@ function buildStyle(pmtilesUrl) {
 
 export async function initMap(container) {
   const protocol = ensureProtocol()
-  let pmtilesUrl = 'pmtiles://' + PMTILES_URL
+  let pmtilesUrl = Capacitor.isNativePlatform() ? 'pmtiles://' + Capacitor.convertFileSrc(PMTILES_URL) : 'pmtiles://' + PMTILES_URL
   let isOffline = false
 
   try {

@@ -1,4 +1,4 @@
-﻿const API_BASE = 'http://localhost:3001/api'
+﻿const API_BASE = 'http://192.168.0.106:3001/api'
 const DEVICE_KEY = 'rahal.deviceId'
 
 export const REPORT_TYPES = [
@@ -44,7 +44,7 @@ function mapReport(r) {
 }
 
 export async function fetchActiveReports() {
-  const res = await fetch(API_BASE + '/reports', { headers: { Accept: 'application/json' } })
+  const res = await fetch(API_BASE + '/reports', { headers: { Accept: 'application/json', 'bypass-tunnel-reminder': 'true' } })
   if (!res.ok) throw new Error('fetch reports failed: ' + res.status)
   const data = await res.json()
   return (data.reports || []).map(mapReport)
@@ -64,7 +64,7 @@ export async function addReport(typeId, center) {
   }
   const res = await fetch(API_BASE + '/reports', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error('create report failed: ' + res.status)
@@ -75,7 +75,7 @@ export async function addReport(typeId, center) {
 export async function confirmReport(reportId) {
   const res = await fetch(API_BASE + '/reports/' + reportId + '/confirm', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
     body: JSON.stringify({ deviceId: getDeviceId() }),
   })
   if (!res.ok) return null
