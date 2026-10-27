@@ -3031,3 +3031,13 @@ button { cursor: pointer; }
 }
 .waze-alert-box.radar-mode .waze-alert-title { color: #cffafe; }
 .waze-alert-box.radar-mode .waze-alert-distance { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border-color: rgba(34, 211, 238, 0.5); }
+
+/* ===== ANDROID SAFE AREA FIX ===== */
+body {
+  padding-top: env(safe-area-inset-top) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+.rahal-app {
+  height: 100dvh !important;
+  overflow: hidden !important;
+}

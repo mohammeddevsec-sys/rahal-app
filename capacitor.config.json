@@ -1,6 +1,8 @@
 ﻿{
     "server": {
-        "allowNavigation": ["*"]
+        "allowNavigation": ["*"],
+        "cleartext": true,
+        "androidScheme": "http"
     },
     "android": {
         "allowMixedContent": true

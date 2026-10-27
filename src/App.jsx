@@ -1273,6 +1273,18 @@ useEffect(() => {
     }
     const onEnd = () => { isDraggingRef.current = false }
     map.on('dragstart', onManualStart)
+
+    const onDragStart = () => {
+      isDraggingRef.current = true;
+      const map = mapRef.current;
+      if (map) map.stop();
+    };
+    const onDragEnd = () => { isDraggingRef.current = false; };
+    map.on('dragstart', onDragStart);
+    map.on('dragend', onDragEnd);
+    map.on('touchstart', onDragStart);
+    map.on('touchend', onDragEnd);
+
     map.on('dragend', onEnd)
     map.on('rotatestart', onManualStart)
     map.on('rotateend', onEnd)
