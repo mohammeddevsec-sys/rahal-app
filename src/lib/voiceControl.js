@@ -8,12 +8,13 @@ import { reverseGeocode } from './nominatim.js'
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition
 let recognition = null
 let isListening = false
+let isWelcomePlaying = false
 let micWindowTimer = null
 let silenceTimer = null
 let accumText = ''
 let lastCommandAt = 0
 
-const MIC_WINDOW_MS = 4000
+const MIC_WINDOW_MS = 6000
 const SILENCE_MS = 3500
 const COOLDOWN_MS = 2500
 
@@ -77,12 +78,35 @@ export function toggleVoiceControl({  getMap, setActiveTab, submitReport, onStar
   stopSpeaking()
   // المايك مغلق تماماً هنا
   
+  isWelcomePlaying = true
+  
   say('\u0623\u0647\u0644\u0627 \u0628\u0643').then(() => {
     if (!isListening) return
     
+    // المايك كان مغلقاً طوال حديث رنا، والآن نفتحه فوراً (0 ثانية)
+    isWelcomePlaying = false 
     safeStart()
-    accumText = ''
+    accumText = '' 
     
+    // بدء مؤقت الاستماع 5 ثوانٍ (أو 6 ثوانٍ)
+    micWindowTimer = setTimeout(() => {
+      console.log('MIC_WINDOW_CLOSED')
+      try {
+        if (accumText.trim()) {
+          const speechText = normalizeAr(accumText.trim().toLowerCase())
+          accumText = ''
+          console.log('VOICE_FINAL_FORCED:', speechText)
+          executeVoiceCommand(speechText, { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, getRouteStats, getLocation })
+        }
+      } catch (e) {
+        console.error('VOICE_CMD_ERR:', e)
+      } finally {
+        clearTimers()
+        safeStop()
+        isListening = false
+        if (onStateChange) onStateChange(false)
+      }
+    }, 5000)
   })
 
 
@@ -90,31 +114,11 @@ export function toggleVoiceControl({  getMap, setActiveTab, submitReport, onStar
   recognition.onstart = function () {
     console.log('MIC_READY')
     if (onStateChange) onStateChange(true)
-
-    // بدء مؤقت الـ 4 ثوانٍ فقط عندما يكون المايك جاهزاً فعلياً
-    if (isListening && !micWindowTimer) {
-      micWindowTimer = setTimeout(() => {
-        console.log('MIC_WINDOW_CLOSED')
-        try {
-          if (accumText.trim()) {
-            const speechText = normalizeAr(accumText.trim().toLowerCase())
-            accumText = ''
-            console.log('VOICE_FINAL_FORCED:', speechText)
-            executeVoiceCommand(speechText, { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, getRouteStats, getLocation })
-          }
-        } catch (e) {
-          console.error('VOICE_CMD_ERR:', e)
-        } finally {
-          clearTimers()
-          safeStop()
-          isListening = false
-          if (onStateChange) onStateChange(false)
-        }
-      }, 4000)
-    }
+    // المؤقت يدار الآن من كتلة say()
   }
 
   recognition.onresult = function (event) {
+    if (isWelcomePlaying) return;
     console.log('RAW_MIC_INPUT:', event.results[event.results.length - 1][0].transcript);
     // Get latest final/partial text
     let latest = ''

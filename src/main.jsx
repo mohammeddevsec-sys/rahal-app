@@ -1,3 +1,14 @@
+
+// مسح أي Service Worker عالق في المتصفح
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for (let registration of registrations) {
+      registration.unregister();
+      console.log('🗑️ Service Worker cleared.');
+    }
+  });
+}
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
