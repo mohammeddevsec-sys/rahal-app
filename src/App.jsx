@@ -345,14 +345,12 @@ function App() {
           markerTargetRef.current.lng = targetLng
           markerTargetRef.current.lat = targetLat
           if (tripActive && followLockRef.current && !isDraggingRef.current) {
-            map.easeTo({
+            map.jumpTo({
               center: [targetLng, targetLat],
               bearing: typeof effHeading === 'number' ? effHeading : (markerTargetRef.current.heading || 0),
               pitch: 60,
               zoom: 17.5,
-              padding: { top: 0, bottom: Math.round((map.getContainer().clientHeight || 600) * 0.35), left: 0, right: 0 },
-              duration: 1000,
-              essential: true
+              padding: { top: 0, bottom: Math.round((map.getContainer().clientHeight || 600) * 0.35), left: 0, right: 0 }
             });
           }
           let effHeading = heading

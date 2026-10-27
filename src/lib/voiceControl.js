@@ -170,7 +170,12 @@ async function executeVoiceCommand(text, ctx) {
   const { getMap, setActiveTab, submitReport, onStartTrip, onStopTrip, hasRoute, tripActive, onNearbySearch, onFreeSearch, getRouteStats, getLocation } = ctx || {}
 
   // ===== REMAINING ROUTE =====
-  if (text.includes('تبقي') || text.includes('باقي') || text.includes('الوصول') || text.includes('نوصل') || text.includes('بقي') || text.includes('نبقى') || text.includes('متبقي') || text.includes('يوصل')) {
+  if (
+    text.includes('تبقي') || text.includes('باقي') || text.includes('الوصول') || text.includes('نوصل') || 
+    text.includes('بقي') || text.includes('نبقى') || text.includes('متبقي') || text.includes('يوصل') || 
+    text.includes('متى') || text.includes('شوكت') || text.includes('شبقة') || text.includes('شبقه') || 
+    text.includes('شكد') || text.includes('شقد')
+  ) {
     if (!tripActive) {
       say('لا توجد رحلة نشطة حالياً')
       return
