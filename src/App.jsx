@@ -402,7 +402,7 @@ function App() {
     }
 
     if (!centeredRef.current) {
-      map.flyTo({ center: [lng, lat], zoom: USER_ZOOM, animate: true })
+      map.flyTo({ center: [lng, lat], zoom: USER_ZOOM, pitch: 60, animate: true })
       centeredRef.current = true
     }
   }, [location, mapReady, routeInfo, tripActive])
