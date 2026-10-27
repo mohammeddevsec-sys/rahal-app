@@ -267,7 +267,7 @@ async function executeVoiceCommand(text, ctx) {
                      text.includes('\u0637\u0633\u0629') ||            // Ø·Ø³Ø©
                      text.includes('\u0637\u0648\u0627\u0631') ||      // Ø·ÙˆØ§Ø±
                      text.includes('\u0643\u0627\u0645\u064A\u0631') || // ÙƒØ§Ù…ÙŠØ±
-                     text.includes('\u0627\u0632\u062F\u062D\u0627\u0645') || // Ø§Ø²Ø¯Ø­Ø§Ù…
+                     text.includes('\u0627\u0632\u062F\u062D\u0627\u0645') || text.includes('\u0632\u062D\u0645\u0629') || text.includes('\u0632\u062D\u0627\u0645') || // Ø§Ø²Ø¯Ø­Ø§Ù…
                      text.includes('\u062D\u064A\u0648\u0627\u0646') || // Ø­ÙŠÙˆØ§Ù†
                      text.includes('\u0628\u0646\u0632\u064A\u0646') || // Ø¨Ù†Ø²ÙŠÙ†
                      text.includes('\u0648\u0642\u0648\u062F') ||       // ÙˆÙ‚ÙˆØ¯
@@ -379,11 +379,11 @@ async function executeVoiceCommand(text, ctx) {
   let type = null
   let msg = ''
 
-  if (text.includes('\u0633\u064A\u0637\u0631') || text.includes('\u062A\u0641\u062A\u064A\u0634')) {
+  if (text.includes('\u0633\u064A\u0637\u0631') || text.includes('\u062A\u0641\u062A\u064A\u0634') || text.includes('\u062D\u0627\u062C\u0632')) {
     type = 'checkpoint'; msg = '\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0646\u0642\u0637\u0629 \u062A\u0641\u062A\u064A\u0634'
-  } else if (text.includes('\u062D\u0627\u062F\u062B') || text.includes('\u062F\u0639\u0645\u064A\u0629')) {
+  } else if (text.includes('\u062D\u0627\u062F\u062B') || text.includes('\u062F\u0639\u0645\u064A\u0629') || text.includes('\u0635\u062F\u0645') || text.includes('\u062A\u0635\u0627\u062F\u0645')) {
     type = 'accident'; msg = '\u062A\u0645 \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u062D\u0627\u062F\u062B'
-  } else if (text.includes('\u0645\u0637\u0628') || text.includes('\u0637\u0633\u0629')) {
+  } else if (text.includes('\u0645\u0637\u0628') || text.includes('\u0637\u0633\u0629') || text.includes('\u062D\u0641\u0631\u0629') || text.includes('\u062F\u0628\u0629') || text.includes('\u0637\u0627\u0633\u0647') || text.includes('\u0642\u0635\u0647')) {
     type = 'speed_bump'; msg = '\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0645\u0637\u0628'
   } else if (text.includes('\u0627\u0632\u062F\u062D\u0627\u0645')) {
     if (text.includes('\u0642\u0648\u064A') || text.includes('\u0634\u062F\u064A\u062F')) {
@@ -395,11 +395,11 @@ async function executeVoiceCommand(text, ctx) {
     type = 'camera'; msg = '\u062A\u0646\u0628\u064A\u0647\u060C \u0631\u0627\u062F\u0627\u0631'
   } else if (text.includes('\u0637\u0648\u0627\u0631') || text.includes('\u0627\u0633\u062A\u063A\u0627\u062B') || text.includes('\u0646\u062C\u062F\u0629') || text.includes('\u0639\u0627\u0637\u0644')) {
     type = 'emergency'; msg = '\u0637\u0648\u0627\u0631\u0626'
-  } else if (text.includes('\u062D\u064A\u0648\u0627\u0646') || text.includes('\u0628\u0642\u0631') || text.includes('\u063A\u0646\u0645')) {
+  } else if (text.includes('\u062D\u064A\u0648\u0627\u0646') || text.includes('\u0628\u0642\u0631') || text.includes('\u063A\u0646\u0645') || text.includes('\u0628\u0647\u064A\u0645\u0629')) {
     type = 'animals'; msg = '\u062D\u064A\u0648\u0627\u0646\u0627\u062A \u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642'
-  } else if (text.includes('\u0637\u0642\u0633') || text.includes('\u0645\u0637\u0631') || text.includes('\u0627\u0645\u0637\u0627\u0631')) {
+  } else if (text.includes('\u0637\u0642\u0633') || text.includes('\u0645\u0637\u0631') || text.includes('\u0627\u0645\u0637\u0627\u0631') || text.includes('\u062A\u0631\u0627\u0628') || text.includes('\u0647\u0648\u0629') || text.includes('\u063A\u0628\u0627\u0631')) {
     type = 'bad_weather'; msg = '\u0637\u0642\u0633 \u0633\u064A\u0621'
-  } else if (text.includes('\u0627\u0639\u0645\u0627\u0644') || text.includes('\u0635\u064A\u0627\u0646\u0629')) {
+  } else if (text.includes('\u0627\u0639\u0645\u0627\u0644') || text.includes('\u0635\u064A\u0627\u0646\u0629') || text.includes('\u062A\u0639\u0645\u064A\u0631') || text.includes('\u0637\u0631\u064A\u0642')) {
     type = 'road_work'; msg = '\u0623\u0639\u0645\u0627\u0644 \u0639\u0644\u0649 \u0627\u0644\u0637\u0631\u064A\u0642'
   } else if (text.includes('\u0645\u0633\u062F\u0648\u062F') || text.includes('\u0645\u063A\u0644\u0642') || text.includes('\u062E\u0637\u0631')) {
     type = 'hazard'; msg = '\u0639\u0627\u0626\u0642 \u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642'
