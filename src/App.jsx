@@ -165,6 +165,14 @@ function App() {
   const [showPointsPopup, setShowPointsPopup] = useState(false)
   const [nearbyReport, setNearbyReport] = useState(null)
   const [activeAlert, setActiveAlert] = useState(null)
+
+  // إغلاق التنبيه تلقائياً بعد 5 ثوانٍ
+  useEffect(() => {
+    if (activeAlert) {
+      const timer = setTimeout(() => setActiveAlert(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeAlert]);
   const triggeredAlertsRef = useRef(new Set());
   const [routeInfo, setRouteInfo] = useState(null)
   const [routeStatus, setRouteStatus] = useState('idle')
@@ -227,14 +235,22 @@ function App() {
           type: 'line',
           source: ROUTE_SOURCE,
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 1 },
+          paint: {
+            'line-color': '#4c1d95',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 10, 4, 13, 6, 15, 10, 18, 14],
+            'line-opacity': 1,
+          },
         })
         map.addLayer({
           id: ROUTE_LAYER_LINE,
           type: 'line',
           source: ROUTE_SOURCE,
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#0b63ce', 'line-width': 6, 'line-opacity': 1 },
+          paint: {
+            'line-color': '#8b5cf6',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 13, 4, 15, 7, 18, 10],
+            'line-opacity': 1,
+          },
         })
 
         map.addSource('traffic-moderate', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -257,21 +273,26 @@ function App() {
         const el = document.createElement('div')
         el.className = 'user-marker'
         el.innerHTML = `
-      <div class="rahal-car-3d">
-        <div class="rahal-car-halo"></div>
-        <svg viewBox="0 0 40 40" style="width: 44px; height: 44px; z-index: 10;">
+      <div class="rahal-car-3d" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+        <svg viewBox="0 0 44 44" style="width: 44px; height: 44px; overflow: visible;">
           <defs>
+            <radialGradient id="groundShadowGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgba(15, 23, 42, 0.75)" />
+              <stop offset="55%" stop-color="rgba(15, 23, 42, 0.40)" />
+              <stop offset="100%" stop-color="rgba(15, 23, 42, 0)" />
+            </radialGradient>
             <linearGradient id="carCyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stop-color="#38e1ff"/>
               <stop offset="50%" stop-color="#00b4d8"/>
               <stop offset="100%" stop-color="#0077b6"/>
             </linearGradient>
           </defs>
-          <path d="M 20 2 L 38 34 C 33 30, 25 28.5, 20 28.5 C 15 28.5, 7 30, 2 34 Z" fill="url(#carCyanGrad)" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="22" cy="30" rx="16" ry="7" fill="url(#groundShadowGrad)" />
+          <path d="M 22 4 L 39 34 C 34 30.5, 27 29, 22 29 C 17 29, 10 30.5, 5 34 Z" fill="url(#carCyanGrad)" stroke="#ffffff" stroke-width="2.8" stroke-linejoin="round"/>
         </svg>
       </div>
     `
-        localMarker = new Marker({ element: el, anchor: 'center', rotationAlignment: 'viewport' })
+        localMarker = new Marker({ element: el, anchor: 'center', rotationAlignment: 'map', pitchAlignment: 'map' })
           .setLngLat(DEFAULT_CENTER)
           .addTo(map)
         markerRef.current = localMarker
@@ -323,6 +344,17 @@ function App() {
           }
           markerTargetRef.current.lng = targetLng
           markerTargetRef.current.lat = targetLat
+          if (tripActive && followLockRef.current && !isDraggingRef.current) {
+            map.easeTo({
+              center: [targetLng, targetLat],
+              bearing: typeof effHeading === 'number' ? effHeading : (markerTargetRef.current.heading || 0),
+              pitch: 60,
+              zoom: 17.5,
+              padding: { top: 0, bottom: Math.round((map.getContainer().clientHeight || 600) * 0.35), left: 0, right: 0 },
+              duration: 1000,
+              essential: true
+            });
+          }
           let effHeading = heading
           const spd = typeof location.speed === 'number' ? Math.abs(location.speed) : 0
           const previousHeading = markerTargetRef.current.heading
@@ -344,6 +376,21 @@ function App() {
           }
           if (typeof effHeading === 'number' && Number.isFinite(effHeading)) {
             markerTargetRef.current.heading = ((effHeading % 360) + 360) % 360
+          }
+
+          // تتبع الكاميرا للسيارة بزاوية 60 وهامش سفلي 35% بانسيابية تامة دون تضارب
+          if (tripActive && followLockRef.current && !isDraggingRef.current) {
+            const bottomPadding = Math.round((map.getContainer().clientHeight || window.innerHeight || 600) * 0.35);
+            map.easeTo({
+              center: [targetLng, targetLat],
+              bearing: typeof effHeading === 'number' ? effHeading : (markerTargetRef.current.heading || 0),
+              pitch: 60,
+              zoom: 17.5,
+              padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
+              duration: 1000,
+              easing: (t) => t,
+              essential: true,
+            });
           }
 
     const src = map.getSource('accuracy')
@@ -571,27 +618,24 @@ function App() {
   }, [])
 
   const startTrip = useCallback(() => {
-    if (!routeInfo) { speakArabic('\u0627\u0644\u0631\u062c\u0627\u0621 \u0627\u062e\u062a\u064a\u0627\u0631 \u0648\u062c\u0647\u0629 \u0623\u0648\u0644\u0627\u064b'); return }
+    if (!routeInfo) { speakArabic('الرجاء اختيار وجهة أولاً'); return }
     followLockRef.current = true
     setFollowLocked(true)
-    const navControlMap = mapRef.current
-    if (navControlMap) {
-      try { navControlMap.dragPan.enable() } catch { /* noop */ }
-      try { navControlMap.touchPitch.disable() } catch { /* noop */ }
-      try { navControlMap.touchZoomRotate.disableRotation() } catch { /* noop */ }
-    }
-    setTripActive(true)
-    
-    // إضافة الهامش السفلي والميلان لدفع السهم للأسفل
-    const startMapNav = mapRef.current;
-    if (startMapNav) {
-      startMapNav.easeTo({
-        padding: { top: 0, bottom: Math.round(window.innerHeight * 0.35), left: 0, right: 0 },
-        pitch: 55,
-        duration: 1000
+    const map = mapRef.current
+    if (map) {
+      map.jumpTo({
+        pitch: 60,
+        zoom: 17.5,
+        padding: { bottom: Math.round(window.innerHeight * 0.35), top: 0, left: 0, right: 0 }
       });
     }
-    speakArabic(UI_TEXT.tripStarted + '\u060C \u0642\u064F\u062F \u0628\u062D\u0630\u0631')
+    if (map) {
+      try { map.dragPan.enable() } catch { /* noop */ }
+      try { map.touchPitch.disable() } catch { /* noop */ }
+      try { map.touchZoomRotate.disableRotation() } catch { /* noop */ }
+    }
+    setTripActive(true)
+    speakArabic(UI_TEXT.tripStarted + '، قُد بحذر')
     typingWarnedRef.current = false
     spokenStepsRef.current = new Set()
     arrivalSpokenRef.current = false
@@ -604,36 +648,41 @@ function App() {
         { lat: dest.lat, lng: dest.lng },
       ).then((route) => { if (route) applyRoute(route) }).catch(() => {})
     }
-    const startMap = mapRef.current
-    if (startMap) {
-      const cameraOptions = {
-        zoom: 17.5,
-        pitch: 60,
-        padding: { top: 0, bottom: Math.round((startMap.getContainer().clientHeight || 600) * 0.32), left: 0, right: 0 },
-        duration: 900,
-        essential: true,
-      }
+
+    if (map) {
+      map.stop()
+      const bottomPad = Math.round((map.getContainer().clientHeight || window.innerHeight || 600) * 0.35)
+      let h = markerTargetRef.current.heading
       if (location) {
-        let h = markerTargetRef.current.heading
         const startSpeed = typeof location.speed === 'number' ? Math.abs(location.speed) : 0
         if (typeof location.heading === 'number' && Number.isFinite(location.heading) && startSpeed >= 1.2) {
           h = location.heading
         }
         if (typeof h !== 'number' || !Number.isFinite(h)) {
-          const dest = destinationRef.current
           if (dest) {
             const dLat = dest.lat - location.lat
             const dLng = (dest.lng - location.lng) * Math.cos(location.lat * Math.PI / 180)
             if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) h = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360
           }
         }
-        if (typeof h !== 'number' || !Number.isFinite(h)) h = 0
-        h = ((h % 360) + 360) % 360
-        cameraOptions.center = [location.lng, location.lat]
-        cameraOptions.bearing = h
       }
-      startMap.stop()
-      startMap.jumpTo(cameraOptions)
+      if (typeof h !== 'number' || !Number.isFinite(h)) h = 0
+      h = ((h % 360) + 360) % 360
+
+      const centerCoord = [
+        markerTargetRef.current.lng || location?.lng || DEFAULT_CENTER[0],
+        markerTargetRef.current.lat || location?.lat || DEFAULT_CENTER[1]
+      ]
+
+      map.easeTo({
+        center: centerCoord,
+        bearing: h,
+        pitch: 60,
+        zoom: 17.5,
+        padding: { top: 0, bottom: bottomPad, left: 0, right: 0 },
+        duration: 1000,
+        essential: true,
+      })
     }
   }, [routeInfo, location, applyRoute])
 
@@ -1048,6 +1097,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
+    let intervalId;
     const load = async () => {
       try {
         const list = await fetchActiveReports()
@@ -1056,7 +1106,15 @@ function App() {
         console.error('fetch reports failed:', err)
       }
     }
+    
     load()
+    // تحديث البلاغات كل 30 ثانية لإزالة المنتهية تلقائياً
+    intervalId = setInterval(load, 30000)
+    
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
     const id = setInterval(load, 30000)
     return () => {
       cancelled = true
@@ -1245,14 +1303,6 @@ useEffect(() => {
         }
       }
       m.setLngLat([sm.lng, sm.lat])
-      const cameraMap = mapRef.current
-      if (cameraMap && tripActiveRef.current && followLockRef.current && !isDraggingRef.current) {
-        cameraMap.setCenter([sm.lng, sm.lat])
-        cameraMap.setBearing(sm.heading)
-        if (Math.abs(cameraMap.getPitch() - 55) > 1) {
-          cameraMap.setPitch(55)
-        }
-      }
     }
     rafId = requestAnimationFrame(step)
   }
@@ -1638,19 +1688,19 @@ const warnedStepsRef = useRef(new Set());
                     <span className="absolute inset-0 rounded-2xl border-2 border-amber-400/70 radar-pulse-ring-1 pointer-events-none" />
                     <div className="relative z-10 flex items-center justify-center w-full h-full">
                       {activeAlert.direction === 'left' && (
-                        <svg viewBox="0 0 36 36" fill="none" className="w-8 h-8 drop-shadow-md">
+                        <svg viewBox="0 0 36 36" fill="none" width="32" height="32" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
                           <path d="M 28 32 L 28 16 C 28 10, 24 6, 17 6 L 10 6" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" />
                           <polyline points="14 1 8 6 14 11" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                       {activeAlert.direction === 'right' && (
-                        <svg viewBox="0 0 36 36" fill="none" className="w-8 h-8 drop-shadow-md">
+                        <svg viewBox="0 0 36 36" fill="none" width="32" height="32" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
                           <path d="M 8 32 L 8 16 C 8 10, 12 6, 19 6 L 26 6" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" />
                           <polyline points="22 1 28 6 22 11" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                       {(!activeAlert.direction || activeAlert.direction === 'straight') && (
-                        <svg viewBox="0 0 36 36" fill="none" className="w-8 h-8 drop-shadow-md">
+                        <svg viewBox="0 0 36 36" fill="none" width="32" height="32" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
                           <path d="M 18 32 L 18 10" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" />
                           <polyline points="12 16 18 10 24 16" stroke="#ffffff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
